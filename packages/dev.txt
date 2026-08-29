@@ -1,0 +1,10 @@
+# Nanuk — stack de desarrollo (repos oficiales)
+neovim
+python
+python-pip
+php
+composer
+mariadb
+docker
+docker-compose
+lazydocker

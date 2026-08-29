@@ -1,0 +1,2 @@
+# Nanuk — impresión 3D (repos oficiales)
+# OrcaSlicer viene del AUR → está en aur.txt

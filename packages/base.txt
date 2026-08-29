@@ -1,0 +1,10 @@
+# Nanuk — paquetes base (repos oficiales)
+# Líneas que empiezan con # son comentarios; una por paquete.
+base-devel
+git
+openssh
+curl
+wget
+unzip
+man-db
+less
