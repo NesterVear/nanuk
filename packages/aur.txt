@@ -1,4 +1,5 @@
 # Nanuk — paquetes del AUR (los instala paru)
-# Nombres por verificar en la VM en Fase 2:
+# Nombres verificados en la máquina real; confirmar en la VM en Fase 2.
+brave-bin
 visual-studio-code-bin
-orca-slicer-bin
+ttf-ia-writer

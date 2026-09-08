@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Nanuk — wordmark.
+  Blanco sobre fondo transparente, con una sola línea de hielo (#9fd8ff)
+  debajo: el horizonte del ártico. Fuente: iA Writer Quattro S Bold
+  (debe estar instalada al renderizar; ver build-assets.sh).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="300" viewBox="0 0 1040 300">
+  <text x="520" y="190"
+        text-anchor="middle"
+        font-family="iA Writer Quattro S, sans-serif"
+        font-weight="700"
+        font-size="190"
+        letter-spacing="28"
+        fill="#ffffff">NANUK</text>
+  <rect x="290" y="232" width="460" height="6" fill="#9fd8ff"/>
+</svg>

@@ -1,0 +1,9 @@
+[Plymouth Theme]
+Name=Nanuk
+Description=Nanuk — splash minimalista: el nombre y nada más.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/nanuk
+ScriptFile=/usr/share/plymouth/themes/nanuk/nanuk.script
+ConsoleLogBackgroundColor=0x000000

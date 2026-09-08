@@ -1,10 +1,28 @@
 # Nanuk — stack de desarrollo (repos oficiales)
+
+# Editor y TUIs
 neovim
-python
-python-pip
-php
-composer
-mariadb
+lazygit
+lazydocker
+github-cli
+
+# Contenedores
 docker
 docker-compose
-lazydocker
+docker-buildx
+
+# Lenguajes y gestores
+python
+python-pip
+uv
+php
+composer
+nodejs
+npm
+mise
+lua
+luarocks
+tree-sitter-cli
+
+# Base de datos
+mariadb

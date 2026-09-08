@@ -1,0 +1,22 @@
+-- Nanuk — tu apariencia. Lo que pongas aquí sustituye al default y al tema.
+-- Referencia: https://wiki.hypr.land/Configuring/Basics/Variables/
+
+-- hl.config({
+--   general = {
+--     gaps_in = 0,          -- sin huecos entre ventanas
+--     gaps_out = 0,
+--     border_size = 2,
+--     layout = "master",    -- o "scrolling" (estilo niri)
+--   },
+--   decoration = {
+--     rounding = 6,         -- esquinas redondeadas
+--     dim_inactive = true,  -- oscurecer ventanas sin foco
+--     dim_strength = 0.15,
+--   },
+--   animations = {
+--     enabled = false,      -- sin animaciones
+--   },
+-- })
+
+-- Otro color de borde activo (por encima del tema):
+-- hl.config({ general = { col = { active_border = "rgb(ffffff)" } } })

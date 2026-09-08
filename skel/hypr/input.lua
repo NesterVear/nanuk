@@ -1,0 +1,21 @@
+-- Nanuk — tu teclado, ratón y touchpad. Lo que descomentes sustituye al default.
+-- Referencia: https://wiki.hypr.land/Configuring/Basics/Variables/#input
+
+-- Ejemplo real: layout us internacional (acentos con AltGr), Bloq Mayús
+-- normal, repetición rápida, ratón sensible, touchpad suave.
+-- hl.config({
+--   input = {
+--     kb_layout = "us",
+--     kb_variant = "altgr-intl",
+--     kb_options = "caps:lock",
+--     repeat_rate = 40,
+--     repeat_delay = 600,
+--     numlock_by_default = true,
+--     sensitivity = 1,
+--
+--     touchpad = {
+--       natural_scroll = false,
+--       scroll_factor = 0.8,
+--     },
+--   },
+-- })

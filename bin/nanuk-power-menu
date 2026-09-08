@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Nanuk — menú de energía (SUPER+ESC). Un wofi en modo dmenu, nada más.
+set -euo pipefail
+
+choice=$(printf '%s\n' "Bloquear" "Suspender" "Cerrar sesión" "Reiniciar" "Apagar" \
+  | wofi --dmenu --prompt "" --width 260 --height 230 --lines 5 --cache-file /dev/null)
+
+case "$choice" in
+  "Bloquear")       hyprlock ;;
+  "Suspender")      systemctl suspend ;;
+  "Cerrar sesión")  uwsm stop ;;
+  "Reiniciar")      systemctl reboot ;;
+  "Apagar")         systemctl poweroff ;;
+esac

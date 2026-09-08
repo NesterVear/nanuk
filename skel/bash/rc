@@ -1,0 +1,6 @@
+# Nanuk — tus alias, funciones y exports de bash.
+# Se carga después de los defaults (~/.config/nanuk/default/bash/rc).
+
+# export PATH="$HOME/.config/composer/vendor/bin:$PATH"
+# alias proms='docker compose exec proms-app'
+# alias imperial='docker compose exec app'

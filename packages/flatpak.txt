@@ -1,0 +1,2 @@
+# Nanuk — apps flatpak (remote flathub). Un ID de app por línea.
+com.orcaslicer.OrcaSlicer

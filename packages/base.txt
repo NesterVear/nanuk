@@ -1,10 +1,43 @@
 # Nanuk — paquetes base (repos oficiales)
-# Líneas que empiezan con # son comentarios; una por paquete.
+# Líneas que empiezan con # son comentarios; un paquete por línea.
+# Esto es lo que se usa en cualquier máquina, con o sin escritorio.
+
+# Sistema y compilación
 base-devel
 git
 openssh
 curl
 wget
+rsync
 unzip
+7zip
 man-db
 less
+pacman-contrib
+reflector
+plocate
+smartmontools
+
+# Red y energía
+networkmanager
+bluez
+bluez-utils
+power-profiles-daemon
+thermald
+zram-generator
+
+# CLI de diario (los que ya usas hoy)
+fastfetch
+btop
+htop
+tree
+jq
+fzf
+ripgrep
+fd
+bat
+eza
+zoxide
+starship
+tmux
+tldr

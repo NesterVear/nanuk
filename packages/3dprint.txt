@@ -1,2 +1,4 @@
 # Nanuk — impresión 3D (repos oficiales)
-# OrcaSlicer viene del AUR → está en aur.txt
+# OrcaSlicer va por flatpak (ver flatpak.txt): es como ya funciona en la
+# máquina real y evita compilar del AUR.
+freecad

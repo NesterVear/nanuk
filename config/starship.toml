@@ -1,0 +1,35 @@
+# Nanuk — prompt (starship). Una línea, directorio + git, acento hielo.
+# Basado en el prompt que ya usas. Referencia: https://starship.rs/config/
+
+add_newline = true
+command_timeout = 3000
+format = "[$directory$git_branch$git_status]($style)$character"
+
+[character]
+success_symbol = "[❯](bold #9fd8ff)"
+error_symbol = "[✗](bold #d19a9a)"
+
+[directory]
+truncation_length = 2
+truncation_symbol = "…/"
+repo_root_style = "bold #9fd8ff"
+repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
+
+[git_branch]
+format = "[$branch]($style) "
+style = "italic #9fd8ff"
+
+[git_status]
+format     = '[$all_status]($style)'
+style      = "#9fd8ff"
+ahead      = "⇡${count} "
+diverged   = "⇕⇡${ahead_count}⇣${behind_count} "
+behind     = "⇣${count} "
+conflicted = " "
+up_to_date = " "
+untracked  = "? "
+modified   = " "
+stashed    = ""
+staged     = ""
+renamed    = ""
+deleted    = ""

@@ -1,0 +1,18 @@
+# Nanuk — apps personales. NO se instalan por defecto.
+# Se instalan solo si corres el instalador con NANUK_EXTRAS=1:
+#   NANUK_EXTRAS=1 bash install/03-packages.sh
+# Los que son del AUR llevan el sufijo ":aur" para que el script sepa usar paru.
+keepassxc
+obsidian
+localsend
+libreoffice-fresh
+libreoffice-fresh-es
+gimp
+qbittorrent
+rclone
+tailscale
+virt-manager
+qemu-desktop
+typora:aur
+dbgate-bin:aur
+telegram-desktop-bin:aur

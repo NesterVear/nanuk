@@ -1,0 +1,73 @@
+/* Nanuk — barra. Negro, blanco, y hielo (#9fd8ff) solo en el workspace activo
+   y en los estados que piden atención. Paleta: themes/nanuk/colors.toml */
+
+* {
+  font-family: "CaskaydiaMono Nerd Font", monospace;
+  font-size: 12px;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+window#waybar {
+  background: #000000;
+  color: #ffffff;
+}
+
+/* Workspaces */
+#workspaces button {
+  padding: 0 8px;
+  color: #7a7a7a;
+  background: transparent;
+}
+
+#workspaces button.active {
+  color: #9fd8ff;
+}
+
+#workspaces button.urgent {
+  color: #ffffff;
+  background: #10202a;
+}
+
+#workspaces button:hover {
+  color: #ffffff;
+  background: #141414;
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* Módulos */
+#clock,
+#network,
+#bluetooth,
+#wireplumber,
+#battery,
+#tray {
+  padding: 0 10px;
+}
+
+#battery.warning {
+  color: #d6cba0;
+}
+
+#battery.critical:not(.charging) {
+  color: #d19a9a;
+}
+
+#wireplumber.muted {
+  color: #7a7a7a;
+}
+
+#network.disconnected {
+  color: #7a7a7a;
+}
+
+tooltip {
+  background: #000000;
+  border: 1px solid #9fd8ff;
+}
+
+tooltip label {
+  color: #ffffff;
+}

@@ -1,3 +1,73 @@
-# Nanuk — escritorio (se completa en Fase 3)
-# hyprland, waybar, wofi, mako, hyprlock, hypridle, hyprpaper,
-# terminal (por decidir: ghostty/alacritty/kitty), pipewire, fuentes...
+# Nanuk — escritorio (repos oficiales)
+
+# Compositor y sesión
+hyprland
+uwsm
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+hyprpolkitagent
+
+# Barra, launcher, notificaciones, lock
+waybar
+wofi
+mako
+hyprlock
+hypridle
+
+# Terminales: foot es el default; kitty para comparar con herramientas CLI
+foot
+foot-terminfo
+kitty
+
+# Capturas, color, portapapeles, brillo, media
+hyprshot
+hyprpicker
+hyprsunset
+grim
+slurp
+wl-clipboard
+wl-clip-persist
+cliphist
+brightnessctl
+playerctl
+
+# Audio
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+gst-plugin-pipewire
+
+# Arranque y llaveros
+plymouth
+polkit
+gnome-keyring
+libsecret
+
+# Archivos y visores
+nautilus
+sushi
+gvfs-mtp
+gvfs-smb
+file-roller
+udiskie
+evince
+imv
+mpv
+
+# Toolkits y temas (Wayland para Qt, tema oscuro GTK)
+qt5-wayland
+qt6-wayland
+adwaita-icon-theme
+gnome-themes-extra
+
+# Fuentes
+ttf-cascadia-mono-nerd
+ttf-nerd-fonts-symbols
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+
+# Flatpak (para OrcaSlicer y otras apps de flatpak.txt)
+flatpak

@@ -1,0 +1,53 @@
+/* Nanuk — launcher. Caja negra con borde de hielo; selección discreta. */
+
+* {
+  font-family: "CaskaydiaMono Nerd Font", monospace;
+  font-size: 13px;
+}
+
+window {
+  background-color: #000000;
+  border: 1px solid #9fd8ff;
+  border-radius: 0;
+}
+
+#outer-box {
+  margin: 12px;
+}
+
+#input {
+  background-color: #000000;
+  color: #ffffff;
+  border: none;
+  border-bottom: 1px solid #141414;
+  border-radius: 0;
+  padding: 8px 6px;
+  margin-bottom: 8px;
+}
+
+#input:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+#scroll {
+  margin: 0;
+}
+
+#entry {
+  padding: 6px 8px;
+  border-radius: 0;
+}
+
+#entry:selected {
+  background-color: #141414;
+  outline: none;
+}
+
+#text {
+  color: #ffffff;
+}
+
+#entry:selected #text {
+  color: #9fd8ff;
+}
