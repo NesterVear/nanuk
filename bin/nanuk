@@ -36,13 +36,17 @@ die()  { echo "${R}✖${X} $*" >&2; exit 1; }
 
 ensure_list() { mkdir -p "$(dirname "$LIST")"; touch "$LIST"; }
 
+# Ayudante del AUR: yay (el de Nanuk) o paru si la máquina ya lo trae.
+# Vacío si no hay ninguno.
+AUR="$(command -v yay || command -v paru || true)"
+
 # ── Detección de origen ────────────────────────────────────────────
 # Devuelve: repo | aur | flatpak | unknown
 source_of() {
   local p="$1"
   if pacman -Si -- "$p" &>/dev/null; then
     echo repo
-  elif command -v paru &>/dev/null && paru -Si -- "$p" &>/dev/null; then
+  elif [[ -n "$AUR" ]] && "$AUR" -Si -- "$p" &>/dev/null; then
     echo aur
   elif [[ "$p" == *.*.* ]] && flatpak remote-info --user flathub "$p" &>/dev/null; then
     echo flatpak
@@ -73,7 +77,7 @@ cmd_install() {
     local src; src="$(source_of "$p")"
     case "$src" in
       repo)    say "repo oficial → $p"; sudo pacman -S --needed --noconfirm -- "$p" ;;
-      aur)     say "AUR → $p";          paru -S --needed --noconfirm -- "$p" ;;
+      aur)     say "AUR → $p";          "$AUR" -S --needed --noconfirm -- "$p" ;;
       flatpak) say "flatpak → $p";      flatpak install --user -y flathub "$p" ;;
       *)       warn "no encuentro '$p' en repos, AUR ni flatpak — lo salto"; continue ;;
     esac
@@ -122,10 +126,10 @@ cmd_sync() {
 
   (( ${#repo[@]} )) && { say "repos: ${repo[*]}"; sudo pacman -S --needed --noconfirm -- "${repo[@]}"; }
   if (( ${#aur[@]} )); then
-    if command -v paru &>/dev/null; then
-      say "AUR: ${aur[*]}"; paru -S --needed --noconfirm -- "${aur[@]}"
+    if [[ -n "$AUR" ]]; then
+      say "AUR: ${aur[*]}"; "$AUR" -S --needed --noconfirm -- "${aur[@]}"
     else
-      warn "paru no está disponible; se omite el AUR: ${aur[*]}"
+      warn "sin ayudante del AUR (yay/paru); se omite: ${aur[*]}"
     fi
   fi
   (( ${#fp[@]}   )) && { say "flatpak: ${fp[*]}"; flatpak install --user -y flathub "${fp[@]}"; }
@@ -139,9 +143,9 @@ cmd_update() {
   say "actualizando el sistema (pacman)..."
   sudo pacman -Syu --noconfirm
 
-  if command -v paru &>/dev/null; then
+  if [[ -n "$AUR" ]]; then
     say "actualizando el AUR..."
-    paru -Sua --noconfirm || warn "algún paquete del AUR falló"
+    "$AUR" -Sua --noconfirm || warn "algún paquete del AUR falló"
   fi
 
   if command -v flatpak &>/dev/null; then
@@ -202,11 +206,11 @@ cmd_doctor() {
   done < <(find -L "$HOME/.config" -maxdepth 3 -type l 2>/dev/null)
   (( broken )) || echo "    ninguno ✔"
 
-  echo "· Helper del AUR:"
-  if command -v paru &>/dev/null && paru --version &>/dev/null; then
-    echo "    paru ✔"
+  echo "· Ayudante del AUR:"
+  if [[ -n "$AUR" ]] && "$AUR" --version &>/dev/null; then
+    echo "    $(basename "$AUR") ✔"
   else
-    echo "    ${Y}paru no funciona${X} — ejecuta: bash $REPO/install/02-pacman.sh"
+    echo "    ${Y}sin ayudante del AUR${X} — ejecuta: bash $REPO/install/02-pacman.sh"
   fi
 
   echo "· Grupos de $USER:"

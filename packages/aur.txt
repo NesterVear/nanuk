@@ -1,7 +1,7 @@
-# Nanuk — paquetes del AUR (los instala paru).
+# Nanuk — paquetes del AUR (los instala yay).
 # brave-origin-bin: navegador SECUNDARIO (Firefox es el de por defecto).
-# La build minimalista de Brave, sin cripto/rewards. Necesita paru; si
-# falla, no pasa nada — se instala luego con: nanuk install brave-origin-bin
+# La build minimalista de Brave, sin cripto/rewards. Necesita el AUR;
+# si falla, no pasa nada — se instala luego con: nanuk install brave-origin-bin
 brave-origin-bin
 visual-studio-code-bin
 ttf-ia-writer        # fuente del wordmark; solo hace falta para REGENERAR los PNG (build-assets.sh), hyprlock y Plymouth usan la imagen

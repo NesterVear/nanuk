@@ -4,7 +4,7 @@
 #
 # Lee las listas de packages/*.txt e instala en tres tandas:
 #   1. repos oficiales  → pacman   (base, desktop, dev, 3dprint)   ← CRÍTICO
-#   2. AUR              → paru     (aur.txt)                        ← opcional
+#   2. AUR              → yay      (aur.txt)                        ← opcional
 #   3. flatpak          → flathub  (flatpak.txt)                    ← opcional
 # Con NANUK_EXTRAS=1 instala además extras.txt (apps personales).
 #
@@ -12,7 +12,7 @@
 # barra, terminal...) vive en repos oficiales. Un fallo del AUR o de flathub
 # se avisa y se sigue — esas apps se pueden instalar luego con `nanuk install`.
 #
-# --needed hace que pacman/paru salten lo que ya está instalado: correr
+# --needed hace que pacman/yay salten lo que ya está instalado: correr
 # este script dos veces es rápido y no cambia nada. Idempotente.
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
@@ -46,12 +46,14 @@ sudo pacman -S --needed --noconfirm "${PACMAN_PKGS[@]}"
 # existe, compilación que peta), lo avisa pero NO aborta el instalador.
 aur_install() {
   (( $# )) || return 0
-  echo "→ AUR (paru): $*"
-  if ! command -v paru &>/dev/null; then
-    echo "⚠ paru no está disponible; se omite el AUR: $*"
+  # yay es el ayudante de Nanuk; si una máquina ya trae paru, también vale.
+  local helper; helper="$(command -v yay || command -v paru || true)"
+  if [[ -z "$helper" ]]; then
+    echo "⚠ sin ayudante del AUR (yay/paru); se omite: $*"
     return 0
   fi
-  paru -S --needed --noconfirm "$@" || echo "⚠ Falló parte del AUR (no es crítico): $*"
+  echo "→ AUR ($(basename "$helper")): $*"
+  "$helper" -S --needed --noconfirm "$@" || echo "⚠ Falló parte del AUR (no es crítico): $*"
 }
 
 mapfile -t AUR_PKGS < <(read_list "$PKG_DIR/aur.txt")
