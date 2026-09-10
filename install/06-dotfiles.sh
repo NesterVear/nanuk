@@ -94,11 +94,12 @@ echo "✔ ~/.config/hypr/hyprland.lua desplegado"
 
 # ── 6. Scripts en ~/.local/bin ─────────────────────────────────────
 mkdir -p "$HOME/.local/bin"
-for script in "$NANUK_ROOT"/bin/nanuk-*; do
+for script in "$NANUK_ROOT"/bin/nanuk "$NANUK_ROOT"/bin/nanuk-*; do
   [[ -f "$script" ]] || continue
+  chmod +x "$script"
   ln -sfn "$script" "$HOME/.local/bin/$(basename "$script")"
 done
-echo "✔ scripts enlazados en ~/.local/bin"
+echo "✔ scripts enlazados en ~/.local/bin (nanuk, nanuk-*)"
 
 # ── 7. Bash: bloque con marcadores en ~/.bashrc ────────────────────
 BASHRC="$HOME/.bashrc"

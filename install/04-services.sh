@@ -37,6 +37,32 @@ else
   echo "✔ $USER añadido al grupo docker (cierra sesión para que aplique)"
 fi
 
+# ── Virtualización (libvirt + KVM) ────────────────────────────────
+# libvirtd.socket = activación por socket: el demonio arranca solo cuando
+# virt-manager o virsh se conectan por primera vez.
+if pacman -Qq libvirt &>/dev/null; then
+  echo "→ Configurando libvirt..."
+  sudo systemctl enable --now libvirtd.socket
+
+  # Grupos: 'libvirt' para gestionar VMs sin sudo; 'kvm' para /dev/kvm.
+  for grp in libvirt kvm; do
+    id -nG "$USER" | grep -qw "$grp" || sudo usermod -aG "$grp" "$USER"
+  done
+
+  # IP forwarding: el NAT de las VMs lo necesita y así sobrevive a reinicios.
+  echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.d/99-nanuk-libvirt.conf >/dev/null
+  sudo sysctl -q -p /etc/sysctl.d/99-nanuk-libvirt.conf || true
+
+  # Red NAT por defecto (virbr0 + dnsmasq). libvirt crea sus propias reglas
+  # de firewall (nftables) al arrancar la red: no hay que tocar nada más
+  # mientras Nanuk no tenga un cortafuegos propio (ver packages/extras.txt).
+  sudo virsh --connect qemu:///system net-autostart default &>/dev/null || true
+  sudo virsh --connect qemu:///system net-start     default &>/dev/null \
+    || echo "  (la red 'default' ya estaba activa)"
+
+  echo "✔ libvirt listo (cierra sesión para entrar al grupo libvirt)"
+fi
+
 # ── MariaDB: inicializar datadir solo la primera vez ────────────────
 if [[ ! -d /var/lib/mysql/mysql ]]; then
   echo "→ Inicializando MariaDB..."

@@ -11,8 +11,13 @@ gimp
 qbittorrent
 rclone
 tailscale
-virt-manager
-qemu-desktop
 typora:aur
 dbgate-bin:aur
 telegram-desktop-bin:aur
+
+# ── Cortafuegos (opcional) ─────────────────────────────────────────
+# Nanuk no trae firewall por defecto (menos es más, y evita el lío
+# docker/libvirt + ufw). Si lo quieres, descomenta estas dos líneas y
+# reinstala; después:  sudo ufw enable
+# ufw
+# ufw-docker:aur

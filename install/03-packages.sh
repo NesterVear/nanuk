@@ -30,7 +30,7 @@ read_list() {
 
 # ── 1. Repos oficiales (crítico) ───────────────────────────────────
 # mapfile mete cada línea de la salida en un elemento del array.
-mapfile -t PACMAN_PKGS < <(read_list "$PKG_DIR"/{base,desktop,dev,3dprint}.txt)
+mapfile -t PACMAN_PKGS < <(read_list "$PKG_DIR"/{base,desktop,dev,3dprint,virt}.txt)
 
 # Microcode según el fabricante de la CPU (correcciones de firmware al arranque).
 case "$(grep -m1 '^vendor_id' /proc/cpuinfo)" in

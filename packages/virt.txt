@@ -1,0 +1,12 @@
+# Nanuk — virtualización (KVM/QEMU + libvirt + virt-manager).
+# Va en la instalación base: una VM es el sitio seguro para experimentar
+# con Arch sin miedo a romper el sistema real.
+libvirt
+qemu-desktop          # QEMU con GUI/SPICE (qemu-base si quieres headless)
+virt-manager
+virt-viewer
+dnsmasq               # DHCP/DNS de la red NAT de libvirt (virbr0)
+openbsd-netcat        # virsh -c qemu+ssh://
+edk2-ovmf             # firmware UEFI para las VMs (Secure Boot, Win11...)
+swtpm                 # TPM 2.0 emulado (requisito de Windows 11)
+dmidecode

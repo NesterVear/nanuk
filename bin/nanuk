@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# nanuk — la CLI del sistema.
+#
+# Idea central: en Nanuk conviven repos oficiales, AUR y flatpak, y da igual
+# de dónde venga cada programa. `nanuk install foo` lo busca en los tres,
+# lo instala, y lo APUNTA en tu lista personal para que sobreviva a una
+# reinstalación (`nanuk sync` en la máquina nueva lo vuelve a poner todo).
+#
+#   nanuk install <paquete...>   instala (repo | AUR | flatpak, lo detecta)
+#   nanuk remove  <paquete...>   desinstala y lo quita de tu lista
+#   nanuk list                   muestra tu lista personal
+#   nanuk sync                   instala todo lo de tu lista (máquina nueva)
+#   nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+#   nanuk theme [<tema>]          lista temas / cambia el activo
+#   nanuk edit                   abre tu capa de config en $EDITOR
+#   nanuk doctor                 diagnóstico rápido del sistema
+#   nanuk help
+# ─────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+# Raíz del repo: este script vive en <repo>/bin/nanuk (aunque se invoque
+# por el symlink de ~/.local/bin).
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+REPO="$(cd "$(dirname "$SELF")/.." && pwd)"
+
+NANUK_CFG="$HOME/.config/nanuk"
+LIST="$NANUK_CFG/user/packages.txt"
+
+# Colores solo si la salida es una terminal.
+if [[ -t 1 ]]; then B=$'\e[1m'; C=$'\e[36m'; Y=$'\e[33m'; R=$'\e[31m'; X=$'\e[0m'
+else B=; C=; Y=; R=; X=; fi
+say()  { echo "${C}▶${X} $*"; }
+warn() { echo "${Y}⚠${X} $*" >&2; }
+die()  { echo "${R}✖${X} $*" >&2; exit 1; }
+
+ensure_list() { mkdir -p "$(dirname "$LIST")"; touch "$LIST"; }
+
+# ── Detección de origen ────────────────────────────────────────────
+# Devuelve: repo | aur | flatpak | unknown
+source_of() {
+  local p="$1"
+  if pacman -Si -- "$p" &>/dev/null; then
+    echo repo
+  elif command -v paru &>/dev/null && paru -Si -- "$p" &>/dev/null; then
+    echo aur
+  elif [[ "$p" == *.*.* ]] && flatpak remote-info --user flathub "$p" &>/dev/null; then
+    echo flatpak
+  else
+    echo unknown
+  fi
+}
+
+# Cómo se anota en packages.txt según el origen.
+tag_for() {
+  case "$1" in
+    repo)    echo "$2" ;;
+    aur)     echo "$2:aur" ;;
+    flatpak) echo "flatpak:$2" ;;
+  esac
+}
+
+record()   { ensure_list; grep -qxF "$1" "$LIST" || echo "$1" >> "$LIST"; }
+unrecord() { ensure_list; grep -vxF "$1" "$LIST" > "$LIST.tmp" && mv "$LIST.tmp" "$LIST"; }
+
+# ── Comandos ──────────────────────────────────────────────────────
+
+cmd_install() {
+  (( $# )) || die "uso: nanuk install <paquete...>"
+  for p in "$@"; do
+    local src; src="$(source_of "$p")"
+    case "$src" in
+      repo)    say "repo oficial → $p"; sudo pacman -S --needed --noconfirm -- "$p" ;;
+      aur)     say "AUR → $p";          paru -S --needed --noconfirm -- "$p" ;;
+      flatpak) say "flatpak → $p";      flatpak install --user -y flathub "$p" ;;
+      *)       warn "no encuentro '$p' en repos, AUR ni flatpak — lo salto"; continue ;;
+    esac
+    record "$(tag_for "$src" "$p")"
+    echo "  anotado en $LIST"
+  done
+}
+
+cmd_remove() {
+  (( $# )) || die "uso: nanuk remove <paquete...>"
+  for p in "$@"; do
+    if pacman -Qq -- "$p" &>/dev/null; then
+      sudo pacman -Rns --noconfirm -- "$p"
+    elif [[ "$p" == *.*.* ]] && flatpak info "$p" &>/dev/null; then
+      flatpak uninstall --user -y "$p"
+    else
+      warn "'$p' no parece instalado"
+    fi
+    unrecord "$p"; unrecord "$p:aur"; unrecord "flatpak:$p"
+    say "quitado: $p"
+  done
+}
+
+cmd_list() {
+  ensure_list
+  if [[ -s "$LIST" ]]; then
+    echo "${B}Tu lista personal${X} ($LIST):"
+    sed 's/^/  /' "$LIST"
+  else
+    echo "Tu lista está vacía. Instala algo con: nanuk install <paquete>"
+  fi
+}
+
+cmd_sync() {
+  ensure_list
+  [[ -s "$LIST" ]] || { echo "Lista vacía, nada que sincronizar."; return; }
+  local repo=() aur=() fp=()
+  while read -r line; do
+    [[ -z "$line" || "$line" == \#* ]] && continue
+    case "$line" in
+      flatpak:*) fp+=("${line#flatpak:}") ;;
+      *:aur)     aur+=("${line%:aur}") ;;
+      *)         repo+=("$line") ;;
+    esac
+  done < "$LIST"
+
+  (( ${#repo[@]} )) && { say "repos: ${repo[*]}"; sudo pacman -S --needed --noconfirm -- "${repo[@]}"; }
+  (( ${#aur[@]}  )) && { say "AUR: ${aur[*]}";   paru -S --needed --noconfirm -- "${aur[@]}"; }
+  (( ${#fp[@]}   )) && { say "flatpak: ${fp[*]}"; flatpak install --user -y flathub "${fp[@]}"; }
+  say "sincronizado"
+}
+
+cmd_update() {
+  say "actualizando el repositorio de Nanuk..."
+  git -C "$REPO" pull --ff-only || warn "no se pudo hacer pull (¿cambios locales?)"
+
+  say "actualizando el sistema (pacman)..."
+  sudo pacman -Syu --noconfirm
+
+  if command -v paru &>/dev/null; then
+    say "actualizando el AUR..."
+    paru -Sua --noconfirm || warn "algún paquete del AUR falló"
+  fi
+
+  if command -v flatpak &>/dev/null; then
+    say "actualizando flatpak..."
+    flatpak update --user -y || true
+  fi
+
+  say "re-desplegando la config por defecto (tu capa user/ no se toca)..."
+  bash "$REPO/install/06-dotfiles.sh"
+
+  echo
+  echo "${B}Listo.${X} Para aplicar la config de Hyprland: ${C}hyprctl reload${X}"
+  echo "(o Super+Esc → Relaunch si cambió algo de entorno)."
+}
+
+cmd_theme() {
+  local themes_dir="$NANUK_CFG/themes"
+  if (( $# == 0 )); then
+    echo "${B}Temas disponibles${X} (activo marcado con ●):"
+    local active; active="$(basename "$(readlink -f "$NANUK_CFG/theme" 2>/dev/null || echo none)")"
+    for t in "$themes_dir"/*/; do
+      t="$(basename "$t")"
+      [[ "$t" == "$active" ]] && echo "  ● $t" || echo "    $t"
+    done
+    return
+  fi
+  local name="$1"
+  [[ -d "$themes_dir/$name" ]] || die "no existe el tema '$name' (mira: nanuk theme)"
+  ln -sfn "themes/$name" "$NANUK_CFG/theme"
+  say "tema activo: $name"
+  command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null || true
+  echo "  (colores de Hyprland aplicados; el splash cambia al próximo 'nanuk update')"
+}
+
+cmd_edit() {
+  local ed="${EDITOR:-nvim}"
+  exec "$ed" "$NANUK_CFG/user"
+}
+
+cmd_doctor() {
+  echo "${B}nanuk doctor${X}"
+  echo
+
+  echo "· Servicios del sistema caídos:"
+  systemctl --failed --no-legend --plain 2>/dev/null | sed 's/^/    /' | grep . \
+    || echo "    ninguno ✔"
+
+  echo "· Servicios de usuario caídos:"
+  systemctl --user --failed --no-legend --plain 2>/dev/null | sed 's/^/    /' | grep . \
+    || echo "    ninguno ✔"
+
+  echo "· Enlaces de Nanuk rotos en ~/.config:"
+  # Solo los symlinks que apuntan a la config de Nanuk (los que crea 06-dotfiles).
+  local broken=0
+  while IFS= read -r l; do
+    [[ "$(readlink "$l")" == *"/nanuk/"* ]] && { echo "    $l"; broken=1; }
+  done < <(find -L "$HOME/.config" -maxdepth 3 -type l 2>/dev/null)
+  (( broken )) || echo "    ninguno ✔"
+
+  echo "· Helper del AUR:"
+  if command -v paru &>/dev/null && paru --version &>/dev/null; then
+    echo "    paru ✔"
+  else
+    echo "    ${Y}paru no funciona${X} — ejecuta: bash $REPO/install/02-pacman.sh"
+  fi
+
+  echo "· Grupos de $USER:"
+  for g in docker libvirt kvm; do
+    id -nG "$USER" | grep -qw "$g" && echo "    $g ✔" || echo "    ${Y}falta $g${X} (cierra sesión si lo añadiste hace poco)"
+  done
+
+  echo "· Hyprland:"
+  if command -v hyprctl &>/dev/null && hyprctl version &>/dev/null; then
+    echo "    corriendo ✔ ($(hyprctl version -j 2>/dev/null | grep -o '"tag":"[^"]*"' | cut -d'"' -f4))"
+  else
+    echo "    no está corriendo (normal si estás en una tty)"
+  fi
+}
+
+usage() {
+  cat <<'EOF'
+nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
+
+  nanuk install <paquete...>   instala (repo | AUR | flatpak, lo detecta solo)
+                               y lo anota en tu lista personal
+  nanuk remove  <paquete...>   desinstala y lo quita de tu lista
+  nanuk list                   muestra tu lista personal
+  nanuk sync                   instala todo lo de tu lista (máquina nueva)
+  nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+  nanuk theme [<tema>]         lista temas / cambia el activo
+  nanuk edit                   abre tu capa de config (~/.config/nanuk/user) en $EDITOR
+  nanuk doctor                 diagnóstico rápido del sistema
+  nanuk help
+EOF
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+  install|i)   cmd_install "$@" ;;
+  remove|rm)   cmd_remove "$@" ;;
+  list|ls)     cmd_list ;;
+  sync)        cmd_sync ;;
+  update|up)   cmd_update ;;
+  theme)       cmd_theme "$@" ;;
+  edit)        cmd_edit ;;
+  doctor)      cmd_doctor ;;
+  help|-h|--help) usage ;;
+  *)           warn "orden desconocida: $cmd"; usage; exit 1 ;;
+esac
