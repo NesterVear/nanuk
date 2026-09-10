@@ -40,9 +40,25 @@ magick -size 420x52 xc:none \
 # Bullet (●) por cada carácter tecleado. El script lo escala a 7x7.
 magick -size 14x14 xc:none -fill white -draw 'circle 7,7 7,1' "$PLY/bullet.png"
 
-# Barra de progreso: fondo gris casi negro y barra de hielo, 2 px de alto.
-magick -size 420x2 xc:'#1a1a1a' "$PLY/progress_box.png"
-magick -size 420x2 xc:"$ACCENT" "$PLY/progress_bar.png"
+# ── Pac-Man para la barra de progreso del arranque ─────────────────
+# El splash muestra a Pac-Man (amarillo) comiéndose una fila de monedas
+# según avanza el progreso real del boot. Guiño al arcade; dura ~15 s y
+# luego entras al escritorio sobrio. Colores ajustables aquí.
+PAC="#ffd400"
+PELLET="#e8b84b"
+
+# Frame A: boca casi cerrada.  Frame B: boca abierta a la derecha.
+# Se dibuja el círculo a 4x y se recorta una cuña con -compose DstOut.
+magick -size 120x120 xc:none -fill "$PAC" -draw "circle 60,60 60,6" \
+  \( -size 120x120 xc:none -fill white -draw "polygon 60,60 128,48 128,72" \) \
+  -compose DstOut -composite -resize 30x30 "$PLY/pac_a.png"
+magick -size 120x120 xc:none -fill "$PAC" -draw "circle 60,60 60,6" \
+  \( -size 120x120 xc:none -fill white -draw "polygon 60,60 132,8 132,112" \) \
+  -compose DstOut -composite -resize 30x30 "$PLY/pac_b.png"
+
+# Moneda: puntito redondo, cálido.
+magick -size 40x40 xc:none -fill "$PELLET" -draw "circle 20,20 20,13" \
+  -resize 10x10 "$PLY/pellet.png"
 
 echo "✔ assets generados en $HERE y $PLY"
 ls -la "$HERE/wordmark.png" "$PLY"/*.png
