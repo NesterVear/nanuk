@@ -1,5 +1,5 @@
-/* Nanuk — barra. Negro, blanco, y hielo (#9fd8ff) solo en el workspace activo
-   y en los estados que piden atención. Paleta: themes/nanuk/colors.toml */
+/* Nanuk — barra. Negro, blanco, gris. Sin color: el acento hielo se
+   reserva para el foco de ventana (Hyprland), no para la barra. */
 
 * {
   font-family: "CaskaydiaMono Nerd Font", monospace;
@@ -7,6 +7,7 @@
   border: none;
   border-radius: 0;
   min-height: 0;
+  /* Sin animaciones ni sombras de texto: nada que parpadee al abrir. */
 }
 
 window#waybar {
@@ -14,22 +15,26 @@ window#waybar {
   color: #ffffff;
 }
 
-/* Workspaces */
+tooltip {
+  background: #000000;
+  border: 1px solid #333333;
+}
+tooltip label { color: #ffffff; }
+
+/* ── Izquierda ──────────────────────────────────────────────── */
 #workspaces button {
-  padding: 0 8px;
-  color: #7a7a7a;
+  padding: 0 9px;
+  color: #707070;
   background: transparent;
 }
-
 #workspaces button.active {
-  color: #9fd8ff;
-}
-
-#workspaces button.urgent {
   color: #ffffff;
-  background: #10202a;
+  box-shadow: inset 0 -2px #ffffff;
 }
-
+#workspaces button.urgent {
+  color: #000000;
+  background: #ffffff;
+}
 #workspaces button:hover {
   color: #ffffff;
   background: #141414;
@@ -37,37 +42,33 @@ window#waybar {
   text-shadow: none;
 }
 
-/* Módulos */
-#clock,
+#custom-keys {
+  padding: 0 12px 0 10px;
+  color: #707070;
+}
+#custom-keys:hover { color: #ffffff; }
+
+/* ── Centro ─────────────────────────────────────────────────── */
+#clock {
+  padding: 0 12px;
+  color: #ffffff;
+}
+#custom-weather {
+  padding: 0 12px 0 0;
+  color: #b0b0b0;
+}
+
+/* ── Derecha ────────────────────────────────────────────────── */
 #network,
 #bluetooth,
 #wireplumber,
 #battery,
 #tray {
   padding: 0 10px;
-}
-
-#battery.warning {
-  color: #d6cba0;
-}
-
-#battery.critical:not(.charging) {
-  color: #d19a9a;
-}
-
-#wireplumber.muted {
-  color: #7a7a7a;
-}
-
-#network.disconnected {
-  color: #7a7a7a;
-}
-
-tooltip {
-  background: #000000;
-  border: 1px solid #9fd8ff;
-}
-
-tooltip label {
   color: #ffffff;
 }
+
+#battery.warning              { color: #b0b0a0; }
+#battery.critical:not(.charging) { color: #b0a0a0; }
+#wireplumber.muted            { color: #707070; }
+#network.disconnected         { color: #707070; }

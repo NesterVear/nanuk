@@ -23,9 +23,14 @@ if grep -q GenuineIntel /proc/cpuinfo; then
   SERVICES+=(thermald)
 fi
 
+# enable (que arranque en cada boot) es obligatorio; start (ahora mismo) no:
+# en una VM thermald o bluetooth pueden negarse a arrancar por falta de
+# hardware, y eso no debe abortar el instalador. Al reiniciar, systemd lo
+# reintenta solo.
 for svc in "${SERVICES[@]}"; do
-  echo "→ enable --now $svc"
-  sudo systemctl enable --now "$svc"
+  echo "→ enable $svc"
+  sudo systemctl enable "$svc"
+  sudo systemctl start "$svc" || echo "  ⚠ $svc no arrancó ahora (¿hardware ausente?); queda activado para el próximo boot"
 done
 
 # ── Docker: usuario al grupo ────────────────────────────────────────

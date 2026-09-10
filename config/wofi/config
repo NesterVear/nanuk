@@ -1,11 +1,13 @@
-# Nanuk — launcher (wofi). Referencia: man 5 wofi
+# Nanuk — launcher (wofi).  man 5 wofi
 mode=drun
-width=520
-height=380
 prompt=
+width=560
+lines=9
+location=center
 allow_images=false
+allow_markup=false
+no_actions=true
 insensitive=true
 matching=fuzzy
-hide_scroll=true
-key_expand=Tab
+gtk_dark=true
 term=foot

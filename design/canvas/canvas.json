@@ -1,0 +1,125 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Tema Nanuk"
+    },
+    {
+      "id": "page-2",
+      "name": "Direcciones (A elegida)"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Arranque.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1366,
+      "h": 768,
+      "title": "1 · Arranque (Plymouth)",
+      "page": "page-1"
+    },
+    {
+      "file": "Bloqueo.dc.html",
+      "x": 1466,
+      "y": 0,
+      "w": 1366,
+      "h": 768,
+      "title": "2 · Bloqueo (hyprlock)",
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 900,
+      "w": 1366,
+      "h": 768,
+      "title": "3 · Escritorio",
+      "page": "page-1"
+    },
+    {
+      "file": "Launcher.dc.html",
+      "x": 1466,
+      "y": 900,
+      "w": 1366,
+      "h": 768,
+      "title": "4 · Launcher y energía",
+      "page": "page-1"
+    },
+    {
+      "file": "Apps.dc.html",
+      "x": 0,
+      "y": 1800,
+      "w": 1366,
+      "h": 768,
+      "title": "5 · Apps GTK y diálogos",
+      "page": "page-1"
+    },
+    {
+      "file": "Tokens.dc.html",
+      "x": 1466,
+      "y": 1800,
+      "w": 1200,
+      "h": 1400,
+      "title": "Sistema visual (tokens)",
+      "page": "page-1",
+      "print": "flow"
+    },
+    {
+      "file": "Estricto.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1366,
+      "h": 768,
+      "title": "A · Vantablack estricto",
+      "page": "page-2"
+    },
+    {
+      "file": "Aireado.dc.html",
+      "x": 1466,
+      "y": 0,
+      "w": 1366,
+      "h": 768,
+      "title": "B · Aireado (Celestia)",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "nota-tema",
+      "x": 0,
+      "y": -200,
+      "w": 560,
+      "page": "page-1",
+      "text": "Tema Nanuk, densidad estricta (elegida 2026-09-09): negro #000, blanco, grises; hielo #9fd8ff solo en el foco. Barra 24 px, gaps 0, bordes 1 px, radio 0, CaskaydiaMono.\nRecorrido: arranque → bloqueo → escritorio → launcher → apps."
+    },
+    {
+      "id": "nota-estricto",
+      "x": 0,
+      "y": -220,
+      "w": 520,
+      "page": "page-2",
+      "text": "A · Vantablack estricto: gaps 0, las inactivas sin borde, barra 24 px.\nA favor: máximo aprovechamiento de una pantalla de 1366x768; la más fiel al vantablack.\nEn contra: sin gaps cuesta ver dónde acaba una ventana y empieza otra; el hielo es la única pista."
+    },
+    {
+      "id": "nota-aireado",
+      "x": 1466,
+      "y": -220,
+      "w": 520,
+      "page": "page-2",
+      "text": "B · Aireado (espíritu Celestia): gaps 12/24, radio 6, bordes #262626, barra 32 px.\nA favor: respira, más elegante en monitores grandes.\nEn contra: en la laptop de 1366x768 pierdes ~60 px útiles por ventana y las esquinas redondas rompen la regla 'radio 0' del resto (wofi, mako, GTK)."
+    },
+    {
+      "id": "nota-actual",
+      "x": 1040,
+      "y": -120,
+      "w": 400,
+      "page": "page-2",
+      "text": "Elegida: A (estricta). Ya aplicada en el repo y en la página 'Tema Nanuk'. B queda aquí como referencia."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

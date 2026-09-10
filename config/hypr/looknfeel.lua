@@ -4,8 +4,10 @@
 
 hl.config({
   general = {
-    gaps_in = 4,
-    gaps_out = 8,
+    -- Densidad "estricta": sin huecos, todo cuadrado. Las ventanas se
+    -- tocan entre sí y con la barra; solo las separa el borde de 1 px.
+    gaps_in = 0,
+    gaps_out = 0,
     border_size = 1,
 
     resize_on_border = true,        -- arrastrar el borde redimensiona

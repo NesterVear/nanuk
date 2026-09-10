@@ -1,11 +1,11 @@
 {
   "layer": "top",
   "position": "top",
-  "height": 26,
+  "height": 24,
   "spacing": 0,
 
-  "modules-left": ["hyprland/workspaces"],
-  "modules-center": ["clock"],
+  "modules-left": ["hyprland/workspaces", "custom/keys"],
+  "modules-center": ["clock", "custom/weather"],
   "modules-right": ["tray", "network", "bluetooth", "wireplumber", "battery"],
 
   "hyprland/workspaces": {
@@ -15,23 +15,57 @@
     "sort-by-number": true
   },
 
+  // Atajos de teclado: icono a la izquierda; clic → lista buscable (nanuk-keys).
+  "custom/keys": {
+    "format": "󰌌",
+    "tooltip-format": "Atajos de teclado  (Super+K)",
+    "on-click": "nanuk-keys"
+  },
+
+  // Centro: día de la semana, fecha y hora.
   "clock": {
-    "format": "{:%a %d %b   %H:%M}",
+    "format": "{:%a %d/%m  ·  %H:%M}",
     "tooltip-format": "<tt>{calendar}</tt>",
     "calendar": {
       "mode": "month",
-      "format": {
-        "today": "<span color='#9fd8ff'><b>{}</b></span>"
-      }
+      "format": { "today": "<span color='#ffffff'><b>{}</b></span>" }
     }
+  },
+
+  // Clima: wttr.in. Sin red o sin respuesta → no muestra nada.
+  "custom/weather": {
+    "exec": "~/.config/waybar/weather.sh",
+    "return-type": "json",
+    "interval": 900,
+    "on-click": "~/.config/waybar/weather.sh --refresh"
+  },
+
+  "wireplumber": {
+    "format": "{icon}  {volume}%",
+    "format-muted": "󰝟  mute",
+    "format-icons": ["󰕿", "󰖀", "󰕾"],
+    "scroll-step": 5,
+    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+    "on-click-right": "pavucontrol",
+    "tooltip-format": "{node_name}  ·  {volume}%"
+  },
+
+  "battery": {
+    "format": "{icon}  {capacity}%",
+    "format-charging": "󰂄  {capacity}%",
+    "format-full": "󰁹  {capacity}%",
+    "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
+    "states": { "warning": 20, "critical": 10 },
+    "interval": 30,
+    "tooltip-format": "{timeTo}  ·  {power}W"
   },
 
   "network": {
     "format-wifi": "󰤨",
     "format-ethernet": "󰈀",
     "format-disconnected": "󰤭",
-    "tooltip-format-wifi": "{essid}  {signalStrength}%  {ipaddr}",
-    "tooltip-format-ethernet": "{ifname}  {ipaddr}",
+    "tooltip-format-wifi": "{essid}   {signalStrength}%   {ipaddr}",
+    "tooltip-format-ethernet": "{ifname}   {ipaddr}",
     "tooltip-format-disconnected": "sin red",
     "on-click": "foot nmtui"
   },
@@ -45,23 +79,5 @@
     "on-click": "foot bluetoothctl"
   },
 
-  "wireplumber": {
-    "format": "{icon} {volume}%",
-    "format-muted": "󰝟",
-    "format-icons": ["󰕿", "󰖀", "󰕾"],
-    "scroll-step": 5,
-    "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
-  },
-
-  "battery": {
-    "format": "{icon} {capacity}%",
-    "format-charging": "󰂄 {capacity}%",
-    "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
-    "states": { "warning": 20, "critical": 10 },
-    "interval": 30
-  },
-
-  "tray": {
-    "spacing": 10
-  }
+  "tray": { "spacing": 10 }
 }

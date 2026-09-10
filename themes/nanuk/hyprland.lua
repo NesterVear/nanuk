@@ -1,10 +1,9 @@
 -- Tema Nanuk — colores de Hyprland.
--- Se carga DESPUÉS de default/hypr/looknfeel.lua y ANTES de tu capa user/,
--- así el tema solo aporta colores y tú puedes cambiar cualquiera después.
--- Ver colors.toml para la paleta completa.
+-- Único sitio con acento: el borde de la ventana ACTIVA (hielo). El resto,
+-- negro. Se carga tras default/hypr/looknfeel.lua y antes de tu capa user/.
 
-local active_border = "rgb(9fd8ff)"       -- hielo: la ventana con foco
-local inactive_border = "rgba(2a2a2aaa)"  -- casi negro: el resto
+local active_border = "rgb(9fd8ff)"        -- hielo: la ventana con foco
+local inactive_border = "rgba(1a1a1aff)"   -- negro: el resto
 
 hl.config({
   general = {
@@ -13,7 +12,6 @@ hl.config({
       inactive_border = inactive_border,
     },
   },
-
   group = {
     col = {
       border_active = active_border,

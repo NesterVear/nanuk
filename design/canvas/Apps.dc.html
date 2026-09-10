@@ -1,0 +1,108 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;700&family=Noto+Sans:wght@400;600&display=swap">
+  <style>
+    body { margin: 0; background: #000000; }
+    a { color: #ffffff; } a:hover { color: #9fd8ff; }
+    .mono { font-family: "Cascadia Mono", "CaskaydiaMono Nerd Font", ui-monospace, monospace; }
+    .sans { font-family: "Noto Sans", system-ui, sans-serif; }
+    .ico { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  </style>
+</helmet>
+<div class="mono" style="position: relative; width: 1366px; height: 768px; background: #000000; color: #ffffff; overflow: hidden; font-size: 12px;">
+
+  <!-- waybar -->
+  <div style="position: absolute; left: 0; top: 0; width: 1366px; height: 24px; display: flex; align-items: center; justify-content: space-between; background: #000000;">
+    <div style="display: flex; align-items: stretch; height: 24px;">
+      <div style="display: flex; align-items: center; padding: 0 9px; color: #707070;">1</div>
+      <div style="display: flex; align-items: center; padding: 0 9px; color: #ffffff; box-shadow: inset 0 -2px #ffffff;">2</div>
+      <div style="display: flex; align-items: center; padding: 0 12px 0 10px; color: #707070;">
+        <svg class="ico" style="width: 14px; height: 14px;" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8" rx="1"></rect><path d="M4 7h1M7 7h1M10 7h1M4 9.5h8"></path></svg>
+      </div>
+    </div>
+    <div style="padding: 0 12px; color: #ffffff;">mar 09/09  ·  22:47</div>
+    <div style="display: flex; align-items: center; color: #ffffff;">
+      <div style="padding: 0 10px; display: flex; align-items: center; gap: 8px;"><svg class="ico" style="width: 14px; height: 14px;" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2zM11 6a3 3 0 0 1 0 4"></path></svg><span>45%</span></div>
+      <div style="padding: 0 10px; display: flex; align-items: center; gap: 8px;"><svg class="ico" style="width: 14px; height: 14px;" viewBox="0 0 16 16"><rect x="1.5" y="4.5" width="11" height="7" rx="1"></rect><path d="M13.5 7v2"></path><rect x="3" y="6" width="6" height="4" fill="currentColor" stroke="none"></rect></svg><span>76%</span></div>
+    </div>
+  </div>
+
+  <!-- Nautilus (GTK4, gtk.css de Nanuk: negro absoluto, headerbar con línea #1a1a1a). Ventana inactiva: el foco está en el diálogo. -->
+  <div class="sans" style="position: absolute; left: 0; top: 24px; width: 1366px; height: 744px; box-sizing: border-box; border: 1px solid #1a1a1a; background: #000000; display: flex; flex-direction: column; font-size: 13px;">
+    <div style="height: 46px; display: flex; align-items: center; gap: 12px; padding: 0 12px; box-shadow: inset 0 -1px #1a1a1a; color: #ffffff;">
+      <div style="display: flex; gap: 4px;">
+        <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #b0b0b0;"><svg class="ico" viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"></path></svg></div>
+        <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #707070;"><svg class="ico" viewBox="0 0 16 16"><path d="M6 3l5 5-5 5"></path></svg></div>
+      </div>
+      <div style="flex: 1 1 auto; height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 12px; background: #0a0a0a; border: 1px solid #1a1a1a; color: #d8d8d8;">
+        <svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg>
+        <span>nestervear</span><span style="color: #707070;">/</span><span>projects</span><span style="color: #707070;">/</span><span style="color: #ffffff;">nanuk</span>
+      </div>
+      <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #b0b0b0;"><svg class="ico" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.5"></circle><path d="M10.5 10.5L14 14"></path></svg></div>
+      <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #b0b0b0;"><svg class="ico" viewBox="0 0 16 16"><path d="M3 5h10M3 8h10M3 11h10"></path></svg></div>
+    </div>
+    <div style="flex: 1 1 auto; display: flex; min-height: 0;">
+      <div style="width: 200px; flex: none; padding: 8px; display: flex; flex-direction: column; gap: 2px; box-shadow: inset -1px 0 #1a1a1a; color: #b0b0b0;">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><path d="M2 8l6-5 6 5v6H2z"></path></svg><span>Carpeta personal</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #141414; color: #ffffff;"><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg><span>projects</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3z"></path><path d="M10 2v3h3"></path></svg><span>Documentos</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><path d="M8 2v9M4.5 7.5L8 11l3.5-3.5M3 13h10"></path></svg><span>Descargas</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10"></rect><path d="M2 10l3-3 3 3 2-2 4 4"></path></svg><span>Imágenes</span></div>
+        <div style="height: 1px; background: #1a1a1a; margin: 6px 4px;"></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="4" width="12" height="8"></rect><path d="M5 12v2h6v-2"></path></svg><span>Nanuk (128 GB)</span></div>
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px;"><svg class="ico" viewBox="0 0 16 16"><rect x="4" y="2" width="8" height="12" rx="1"></rect><path d="M6 5h4"></path></svg><span>USB 32 GB</span></div>
+      </div>
+      <div style="flex: 1 1 auto; padding: 8px 0; display: flex; flex-direction: column;">
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 6px 16px; color: #707070; font-size: 12px;"><span>Nombre</span><span>Tamaño</span><span>Tipo</span><span>Modificado</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; color: #d8d8d8;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg>bin</span><span>3 elementos</span><span>Carpeta</span><span>hoy 22:12</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; color: #d8d8d8;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg>config</span><span>14 elementos</span><span>Carpeta</span><span>hoy 22:40</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; color: #d8d8d8;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg>install</span><span>8 elementos</span><span>Carpeta</span><span>hoy 22:41</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; background: #141414; color: #ffffff;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M1.5 4.5h4l1.5 1.5h7.5v7h-13z"></path></svg>themes</span><span>1 elemento</span><span>Carpeta</span><span>hoy 21:58</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; color: #d8d8d8;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3z"></path><path d="M10 2v3h3"></path></svg>PLAN.md</span><span>14,2 kB</span><span>Markdown</span><span>hoy 22:41</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 16px; color: #d8d8d8;"><span style="display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3z"></path><path d="M10 2v3h3"></path></svg>README.md</span><span>1,8 kB</span><span>Markdown</span><span>ayer</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Diálogo "Guardar": etiquetado dialog → flota y se centra (estilo Windows). Ventana activa: borde hielo. -->
+  <div class="sans" style="position: absolute; left: 363px; top: 184px; width: 640px; height: 400px; box-sizing: border-box; border: 1px solid #9fd8ff; background: #000000; display: flex; flex-direction: column; font-size: 13px; color: #ffffff;">
+    <div style="height: 46px; display: flex; align-items: center; justify-content: space-between; padding: 0 8px 0 16px; box-shadow: inset 0 -1px #1a1a1a;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="height: 32px; padding: 0 14px; display: flex; align-items: center; border: 1px solid #333333; color: #ffffff;">Cancelar</div>
+      </div>
+      <div style="font-weight: 600;">Guardar como</div>
+      <div style="height: 32px; padding: 0 14px; display: flex; align-items: center; background: #9fd8ff; color: #000000; font-weight: 600;">Guardar</div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; padding: 12px 16px;">
+      <span style="color: #b0b0b0;">Nombre</span>
+      <div style="flex: 1 1 auto; height: 32px; display: flex; align-items: center; padding: 0 10px; background: #000000; border: 1px solid #333333; box-shadow: inset 0 -1px #9fd8ff;">captura-tema<span style="display: inline-block; width: 1px; height: 16px; background: #9fd8ff; margin-left: 1px;"></span>.png</div>
+    </div>
+    <div style="flex: 1 1 auto; display: flex; min-height: 0;">
+      <div style="width: 160px; flex: none; padding: 8px; display: flex; flex-direction: column; gap: 2px; box-shadow: inset -1px 0 #1a1a1a; color: #b0b0b0;">
+        <div style="padding: 8px 10px;">Recientes</div>
+        <div style="padding: 8px 10px;">Carpeta personal</div>
+        <div style="padding: 8px 10px; background: #141414; color: #ffffff;">Imágenes</div>
+        <div style="padding: 8px 10px;">Documentos</div>
+      </div>
+      <div style="flex: 1 1 auto; padding: 8px 0; display: flex; flex-direction: column; color: #d8d8d8;">
+        <div style="padding: 8px 16px;">2026-09-09_22-40.png</div>
+        <div style="padding: 8px 16px;">wordmark.png</div>
+        <div style="padding: 8px 16px;">preview-splash-vs-lock.png</div>
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; box-shadow: inset 0 1px #1a1a1a; color: #b0b0b0;">
+      <span>~/Imágenes</span>
+      <div style="height: 28px; padding: 0 10px; display: flex; align-items: center; gap: 8px; border: 1px solid #333333;"><span>Imagen PNG</span><svg class="ico" viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"></path></svg></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

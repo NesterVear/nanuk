@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #000000; }
+    a { color: #ffffff; } a:hover { color: #9fd8ff; }
+    .mono { font-family: "Cascadia Mono", "CaskaydiaMono Nerd Font", ui-monospace, monospace; }
+  </style>
+</helmet>
+<div class="mono" style="position: relative; width: 1366px; height: 768px; background: #000000; color: #ffffff; overflow: hidden; font-size: 13px;">
+  <!-- Dirección B · Aireado (espíritu Celestia): gaps 12/24, radio 6, bordes #262626, barra de 32 px, relleno generoso. -->
+  <div style="position: absolute; left: 0; top: 0; width: 1366px; height: 32px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-sizing: border-box;">
+    <div style="display: flex; gap: 22px;"><span style="color: #ffffff;">1</span><span style="color: #707070;">2</span><span style="color: #707070;">3</span></div>
+    <div>mar 09/09  ·  22:41</div>
+    <div style="display: flex; gap: 22px; color: #b0b0b0;"><span>18°C</span><span>45%</span><span>76%</span></div>
+  </div>
+  <div style="position: absolute; left: 24px; top: 56px; width: 653px; height: 688px; box-sizing: border-box; border: 1px solid #9fd8ff; border-radius: 6px; background: #000000; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="width: 180px; height: 10px; background: #ffffff; border-radius: 5px;"></div>
+    <div style="width: 320px; height: 10px; background: #707070; border-radius: 5px;"></div>
+    <div style="width: 260px; height: 10px; background: #707070; border-radius: 5px;"></div>
+    <div style="width: 400px; height: 10px; background: #707070; border-radius: 5px;"></div>
+    <div style="width: 8px; height: 14px; background: #9fd8ff;"></div>
+  </div>
+  <div style="position: absolute; left: 689px; top: 56px; width: 653px; height: 688px; box-sizing: border-box; border: 1px solid #262626; border-radius: 6px; background: #000000; padding: 24px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="width: 220px; height: 10px; background: #707070; border-radius: 5px;"></div>
+    <div style="width: 360px; height: 10px; background: #333333; border-radius: 5px;"></div>
+    <div style="width: 300px; height: 10px; background: #333333; border-radius: 5px;"></div>
+  </div>
+  <div style="position: absolute; right: 24px; top: 72px; width: 360px; box-sizing: border-box; padding: 16px 18px; background: #000000; border: 1px solid #262626; border-radius: 6px; font-size: 14px; line-height: 20px;">
+    <div style="font-weight: 700;">Captura guardada</div>
+    <div style="color: #b0b0b0;">~/Pictures/2026-09-09_22-40.png</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

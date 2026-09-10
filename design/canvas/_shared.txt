@@ -1,0 +1,4 @@
+(referencia de tokens usados en los artboards — no se siembra)
+bg #000000 · fg #ffffff · dim #b0b0b0 · muted #707070 · border #333333 · inactive #1a1a1a
+surface #141414 · surface2 #0a0a0a · selection #1e1e1e · ice #9fd8ff (solo foco)
+ansi: red #b0a0a0 green #a0b0a0 yellow #b0b0a0 blue #a0a8b0 magenta #b0a0b0 cyan #a0b0b0 white #d8d8d8

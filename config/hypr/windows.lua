@@ -18,8 +18,11 @@ n.window({ class = "^$", title = "^$", xwayland = true, float = true, fullscreen
   no_focus = true,
 })
 
--- Etiqueta "terminal" (la usa input.lua para el scroll y sirve para tus reglas).
+-- Etiqueta "terminal": una sola lista de terminales para todas las reglas.
 n.window("^(foot|kitty|Alacritty|com\\.mitchellh\\.ghostty)$", { tag = "+terminal" })
+-- Scroll de touchpad más cómodo en terminales. (Va DESPUÉS de la etiqueta:
+-- Hyprland evalúa las reglas en orden y la etiqueta tiene que existir ya.)
+n.window({ tag = "terminal" }, { scroll_touchpad = 1.5 })
 
 -- ── Diálogos y pop-ups: flotando y centrados (estilo Windows) ───────
 -- En un tiling WM los diálogos se abren como una ventana más y se ven mal.

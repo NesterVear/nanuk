@@ -45,6 +45,9 @@ polkit
 gnome-keyring
 libsecret
 
+# Navegador (Brave va por flatpak, ver flatpak.txt)
+firefox
+
 # Archivos y visores
 nautilus
 sushi

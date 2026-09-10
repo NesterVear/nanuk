@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #000000; }
+    a { color: #ffffff; } a:hover { color: #9fd8ff; }
+    .mono { font-family: "Cascadia Mono", "CaskaydiaMono Nerd Font", ui-monospace, monospace; }
+  </style>
+</helmet>
+<div class="mono" style="position: relative; width: 1366px; height: 768px; background: #000000; color: #ffffff; overflow: hidden; font-size: 12px;">
+  <!-- Dirección A · Vantablack estricto: gaps 0, sin borde en inactivas, barra de 24 px, relleno mínimo. -->
+  <div style="position: absolute; left: 0; top: 0; width: 1366px; height: 24px; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; box-sizing: border-box;">
+    <div style="display: flex; gap: 14px;"><span style="color: #ffffff;">1</span><span style="color: #707070;">2</span><span style="color: #707070;">3</span></div>
+    <div>22:41</div>
+    <div style="display: flex; gap: 14px; color: #b0b0b0;"><span>45%</span><span>76%</span></div>
+  </div>
+  <!-- ventana activa: solo borde hielo 1 px, pegada a la barra y al borde -->
+  <div style="position: absolute; left: 0; top: 24px; width: 683px; height: 744px; box-sizing: border-box; border: 1px solid #9fd8ff; background: #000000; padding: 8px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="width: 180px; height: 10px; background: #ffffff;"></div>
+    <div style="width: 320px; height: 10px; background: #707070;"></div>
+    <div style="width: 260px; height: 10px; background: #707070;"></div>
+    <div style="width: 400px; height: 10px; background: #707070;"></div>
+    <div style="width: 140px; height: 10px; background: #707070;"></div>
+    <div style="width: 8px; height: 14px; background: #9fd8ff;"></div>
+  </div>
+  <!-- ventana inactiva: sin borde. La separación es solo el negro. -->
+  <div style="position: absolute; left: 683px; top: 24px; width: 683px; height: 744px; box-sizing: border-box; background: #000000; padding: 8px; display: flex; flex-direction: column; gap: 10px;">
+    <div style="width: 220px; height: 10px; background: #707070;"></div>
+    <div style="width: 360px; height: 10px; background: #333333;"></div>
+    <div style="width: 300px; height: 10px; background: #333333;"></div>
+    <div style="width: 380px; height: 10px; background: #333333;"></div>
+  </div>
+  <div style="position: absolute; left: 0; top: 24px; width: 1px; height: 744px; background: #1a1a1a;"></div>
+  <div style="position: absolute; right: 0; top: 24px; width: 360px; box-sizing: border-box; padding: 8px 10px; background: #000000; border-left: 1px solid #333333; border-bottom: 1px solid #333333; font-size: 13px; line-height: 18px;">
+    <div style="font-weight: 700;">Captura guardada</div>
+    <div style="color: #b0b0b0;">~/Pictures/2026-09-09_22-40.png</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

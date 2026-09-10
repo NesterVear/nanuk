@@ -26,9 +26,12 @@ if ! fc-list : family | grep -i "iA Writer Quattro S" >/dev/null; then
 fi
 
 # ── Wordmark ────────────────────────────────────────────────────────
-# Versión grande para lock screen / fastfetch / web, y la del splash.
-rsvg-convert -w 1040 "$HERE/wordmark.svg" -o "$HERE/wordmark.png"
-rsvg-convert -w 520  "$HERE/wordmark.svg" -o "$PLY/logo.png"
+# La MISMA imagen para el splash (plymouth/logo.png) y para el lock
+# (wordmark.png, que hyprlock lee de ~/.config/nanuk/theme/). Se renderiza
+# grande (1400 px): Plymouth la escala a ~62% del ancho de la pantalla y
+# hyprlock a 850 px (config/hypr/hyprlock.conf), así se ve rotunda en ambos.
+rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$HERE/wordmark.png"
+rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$PLY/logo.png"
 
 # ── Assets del splash (Plymouth) ────────────────────────────────────
 # Caja del campo de contraseña: solo un borde fino de hielo, sin relleno.
@@ -40,25 +43,12 @@ magick -size 420x52 xc:none \
 # Bullet (●) por cada carácter tecleado. El script lo escala a 7x7.
 magick -size 14x14 xc:none -fill white -draw 'circle 7,7 7,1' "$PLY/bullet.png"
 
-# ── Pac-Man para la barra de progreso del arranque ─────────────────
-# El splash muestra a Pac-Man (amarillo) comiéndose una fila de monedas
-# según avanza el progreso real del boot. Guiño al arcade; dura ~15 s y
-# luego entras al escritorio sobrio. Colores ajustables aquí.
-PAC="#ffd400"
-PELLET="#e8b84b"
-
-# Frame A: boca casi cerrada.  Frame B: boca abierta a la derecha.
-# Se dibuja el círculo a 4x y se recorta una cuña con -compose DstOut.
-magick -size 120x120 xc:none -fill "$PAC" -draw "circle 60,60 60,6" \
-  \( -size 120x120 xc:none -fill white -draw "polygon 60,60 128,48 128,72" \) \
-  -compose DstOut -composite -resize 30x30 "$PLY/pac_a.png"
-magick -size 120x120 xc:none -fill "$PAC" -draw "circle 60,60 60,6" \
-  \( -size 120x120 xc:none -fill white -draw "polygon 60,60 132,8 132,112" \) \
-  -compose DstOut -composite -resize 30x30 "$PLY/pac_b.png"
-
-# Moneda: puntito redondo, cálido.
-magick -size 40x40 xc:none -fill "$PELLET" -draw "circle 20,20 20,13" \
-  -resize 10x10 "$PLY/pellet.png"
+# ── Barra de progreso del arranque: una línea ───────────────────────
+# Pista gris (#333333) y línea blanca que el script estira según el progreso
+# real del boot. 520x2 px, sobria. (El Pac-Man se queda solo en la terminal:
+# ILoveCandy en pacman.conf, ver install/02-pacman.sh.)
+magick -size 520x2 xc:'#333333' "$PLY/progress_box.png"
+magick -size 520x2 xc:'#ffffff' "$PLY/progress_bar.png"
 
 echo "✔ assets generados en $HERE y $PLY"
 ls -la "$HERE/wordmark.png" "$PLY"/*.png

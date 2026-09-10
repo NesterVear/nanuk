@@ -1,24 +1,23 @@
-# Nanuk — notificaciones (mako).
-# Referencia: man 5 mako
+# Nanuk — notificaciones (mako).  Negro, borde gris, sin color.
+# man 5 mako
 
 font=CaskaydiaMono Nerd Font 11
 background-color=#000000
 text-color=#ffffff
-border-color=#9fd8ff
+border-color=#333333
 border-size=1
 border-radius=0
 padding=12
-margin=10
+margin=0            # pegada a la esquina, como las ventanas (sin gaps)
 width=360
 anchor=top-right
 default-timeout=5000
-progress-color=over #9fd8ff
+progress-color=over #2a2a2a
 max-visible=5
 
 [urgency=critical]
 border-color=#ffffff
 default-timeout=0
 
-# `makoctl mode -t silent` activa este modo: no se muestra nada.
 [mode=silent]
 invisible=1

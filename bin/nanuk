@@ -61,7 +61,9 @@ tag_for() {
 }
 
 record()   { ensure_list; grep -qxF "$1" "$LIST" || echo "$1" >> "$LIST"; }
-unrecord() { ensure_list; grep -vxF "$1" "$LIST" > "$LIST.tmp" && mv "$LIST.tmp" "$LIST"; }
+# grep -v devuelve 1 si no queda ninguna línea (lista de un solo paquete):
+# no es un error, por eso el `|| true` antes de mover el temporal.
+unrecord() { ensure_list; grep -vxF "$1" "$LIST" > "$LIST.tmp" || true; mv "$LIST.tmp" "$LIST"; }
 
 # ── Comandos ──────────────────────────────────────────────────────
 
@@ -119,7 +121,13 @@ cmd_sync() {
   done < "$LIST"
 
   (( ${#repo[@]} )) && { say "repos: ${repo[*]}"; sudo pacman -S --needed --noconfirm -- "${repo[@]}"; }
-  (( ${#aur[@]}  )) && { say "AUR: ${aur[*]}";   paru -S --needed --noconfirm -- "${aur[@]}"; }
+  if (( ${#aur[@]} )); then
+    if command -v paru &>/dev/null; then
+      say "AUR: ${aur[*]}"; paru -S --needed --noconfirm -- "${aur[@]}"
+    else
+      warn "paru no está disponible; se omite el AUR: ${aur[*]}"
+    fi
+  fi
   (( ${#fp[@]}   )) && { say "flatpak: ${fp[*]}"; flatpak install --user -y flathub "${fp[@]}"; }
   say "sincronizado"
 }
@@ -165,7 +173,8 @@ cmd_theme() {
   ln -sfn "themes/$name" "$NANUK_CFG/theme"
   say "tema activo: $name"
   command -v hyprctl &>/dev/null && hyprctl reload &>/dev/null || true
-  echo "  (colores de Hyprland aplicados; el splash cambia al próximo 'nanuk update')"
+  echo "  (colores de Hyprland aplicados; hyprlock usa el wordmark del tema nuevo desde ya)"
+  echo "  (el splash de arranque no cambia: para eso, bash $REPO/install/05-desktop.sh)"
 }
 
 cmd_edit() {
@@ -213,6 +222,54 @@ cmd_doctor() {
   fi
 }
 
+cmd_lang() {
+  if (( $# == 0 )); then
+    cat <<'EOF'
+Lenguajes y toolchains.   Uso: nanuk lang <nombre...>
+
+  rust     rustup + toolchain 'stable'
+  node     mise: node@lts (global)
+  python   mise: python@latest (global; ya hay uno del sistema)
+  go       mise: go@latest
+  ruby     mise: ruby@latest
+  java     mise: java@lts
+  php      pacman: php + composer (ya viene de serie)
+  r        pacman: r (ya viene de serie)
+
+Instalados ahora mismo:
+EOF
+    command -v rustc  &>/dev/null && echo "  rust    $(rustc --version 2>/dev/null | awk '{print $2}')"
+    command -v node   &>/dev/null && echo "  node    $(node -v 2>/dev/null)"
+    command -v python &>/dev/null && echo "  python  $(python --version 2>&1 | awk '{print $2}')"
+    command -v go     &>/dev/null && echo "  go      $(go version 2>/dev/null | awk '{print $3}' | sed 's/go//')"
+    command -v ruby   &>/dev/null && echo "  ruby    $(ruby -e 'print RUBY_VERSION' 2>/dev/null)"
+    command -v php    &>/dev/null && echo "  php     $(php -r 'echo PHP_VERSION;' 2>/dev/null)"
+    command -v R      &>/dev/null && echo "  r       $(R --version 2>/dev/null | awk 'NR==1{print $3}')"
+    return 0
+  fi
+
+  for l in "$@"; do
+    case "$l" in
+      rust)
+        sudo pacman -S --needed --noconfirm rustup
+        rustup default stable ;;
+      node|python|go|ruby|java)
+        command -v mise &>/dev/null || die "falta 'mise' (está en dev.txt; re-ejecuta el paso 03)"
+        case "$l" in
+          node)   mise use -g node@lts ;;
+          python) mise use -g python@latest ;;
+          go)     mise use -g go@latest ;;
+          ruby)   mise use -g ruby@latest ;;
+          java)   mise use -g java@lts ;;
+        esac ;;
+      php)  sudo pacman -S --needed --noconfirm php composer ;;
+      r)    sudo pacman -S --needed --noconfirm r ;;
+      *)    warn "no sé instalar '$l' — mira: nanuk lang" ;;
+    esac
+    say "$l listo"
+  done
+}
+
 usage() {
   cat <<'EOF'
 nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
@@ -224,6 +281,8 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk sync                   instala todo lo de tu lista (máquina nueva)
   nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
   nanuk theme [<tema>]         lista temas / cambia el activo
+  nanuk lang [<lenguaje...>]   instala/lista lenguajes (rust node python go php r ...)
+  nanuk keys                   chuleta de atajos de teclado (también Super+K)
   nanuk edit                   abre tu capa de config (~/.config/nanuk/user) en $EDITOR
   nanuk doctor                 diagnóstico rápido del sistema
   nanuk help
@@ -239,6 +298,8 @@ case "$cmd" in
   sync)        cmd_sync ;;
   update|up)   cmd_update ;;
   theme)       cmd_theme "$@" ;;
+  lang)        cmd_lang "$@" ;;
+  keys)        exec nanuk-keys ;;
   edit)        cmd_edit ;;
   doctor)      cmd_doctor ;;
   help|-h|--help) usage ;;

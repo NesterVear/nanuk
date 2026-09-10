@@ -1,40 +1,45 @@
 # Nanuk — paleta fuente del tema.
-# Negro absoluto, blanco, y UN acento: hielo. Todo lo demás son grises.
-# Los colores ANSI de terminal llevan un tinte muy suave para que diffs,
-# errores y warnings se distingan sin romper la sobriedad. Si prefieres
-# grises puros (como Vantablack), iguala red/green/yellow/magenta a muted.
 #
-# Hoy cada app tiene estos valores copiados a mano (waybar/style.css,
-# foot/foot.ini, ...). En Fase 3/5 se generan desde aquí con plantillas.
+# Regla: NEGRO + BLANCO + GRISES. El acento (hielo, #9fd8ff) aparece SOLO
+# donde hay "foco": el borde de la ventana activa, el cursor de texto, y la
+# línea del lock / splash de arranque. En ningún otro sitio.
+#
+# Forma: densidad ESTRICTA. gaps 0, bordes de 1 px, radio 0, sin sombras
+# ni blur. Ventana activa: borde hielo; inactiva: #1a1a1a (casi invisible,
+# solo una costura entre ventanas).
+#
+# Los colores ANSI de la terminal son grises con un tinte mínimo, lo justo
+# para distinguir un `+` de un `-` en un diff de git sin romper el B&N.
 
 mode = "dark"
 
-accent = "#9fd8ff"      # hielo
-selection = "#10202a"   # hielo muy oscuro, para selección de texto
-muted = "#7a7a7a"
+accent = "#9fd8ff"        # hielo — SOLO foco (ver regla arriba)
+selection = "#1e1e1e"     # selección de texto: gris, no azul
+muted = "#707070"
 
 background = "#000000"
-dark_background = "#090909"
-darker_background = "#070707"
+dark_background = "#080808"
+darker_background = "#050505"
 lighter_background = "#141414"
 
 foreground = "#ffffff"
-dark_foreground = "#505050"
-light_foreground = "#ececec"
+dark_foreground = "#5a5a5a"
+light_foreground = "#d8d8d8"
 bright_foreground = "#ffffff"
 
-red = "#d19a9a"
-yellow = "#d6cba0"
-orange = "#cdb59a"
-green = "#a7c4a0"
-cyan = "#8ec9e8"
-blue = "#9fd8ff"
-magenta = "#b8a8d0"
-brown = "#5c5c5c"
+# ANSI: grises con tinte mínimo.
+red = "#b0a0a0"
+yellow = "#b0b0a0"
+orange = "#b0a89c"
+green = "#a0b0a0"
+cyan = "#a0b0b0"
+blue = "#a0a8b0"
+magenta = "#b0a0b0"
+brown = "#5a5a5a"
 
-bright_red = "#e0a8a8"
-bright_yellow = "#e3d9b0"
-bright_green = "#b6d3af"
-bright_cyan = "#a6d6f0"
-bright_blue = "#b5e2ff"
-bright_magenta = "#c8b8e0"
+bright_red = "#c8b8b8"
+bright_yellow = "#c8c8b8"
+bright_green = "#b8c8b8"
+bright_cyan = "#b8c8c8"
+bright_blue = "#b8c0c8"
+bright_magenta = "#c8b8c8"

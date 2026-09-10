@@ -1,0 +1,26 @@
+/* Nanuk — GTK forzado a negro absoluto.
+ * Adwaita-dark es gris (#242424); esto lo lleva a #000 para que Nautilus,
+ * los diálogos de abrir/guardar y el resto de apps GTK peguen con el
+ * sistema (vantablack). Paleta: themes/nanuk/colors.toml */
+
+@define-color accent_color        #9fd8ff;
+@define-color accent_bg_color     #9fd8ff;
+@define-color accent_fg_color     #000000;
+@define-color window_bg_color     #000000;
+@define-color window_fg_color     #ffffff;
+@define-color view_bg_color       #000000;
+@define-color view_fg_color       #ffffff;
+@define-color headerbar_bg_color  #000000;
+@define-color headerbar_fg_color  #ffffff;
+@define-color sidebar_bg_color    #000000;
+@define-color popover_bg_color    #0a0a0a;
+@define-color popover_fg_color    #ffffff;
+@define-color card_bg_color       #0a0a0a;
+@define-color dialog_bg_color     #000000;
+@define-color destructive_color   #d19a9a;
+
+window, .background       { background-color: #000000; color: #ffffff; }
+headerbar, .titlebar      { background-color: #000000; box-shadow: inset 0 -1px #1a1a1a; }
+.sidebar, placessidebar   { background-color: #000000; }
+entry, textview, .view    { background-color: #000000; }
+popover > contents, menu  { background-color: #0a0a0a; border: 1px solid #1a1a1a; }

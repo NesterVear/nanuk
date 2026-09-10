@@ -1,0 +1,10 @@
+# Nanuk — lazydocker. Mismo lenguaje visual que lazygit.
+gui:
+  nerdFontsVersion: "3"
+  theme:
+    activeBorderColor:   ['#9fd8ff', bold]
+    inactiveBorderColor: ['#333333']
+    selectedLineBgColor: ['#141414']
+    optionsTextColor:    ['#707070']
+  returnImmediately: false
+  wrapMainPanel: true

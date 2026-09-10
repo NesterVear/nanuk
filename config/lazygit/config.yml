@@ -1,0 +1,25 @@
+# Nanuk — lazygit. Negro/gris; hielo solo en el borde del panel activo.
+gui:
+  nerdFontsVersion: "3"
+  showListFooter: false
+  showRandomTip: false
+  showBottomLine: false
+  theme:
+    activeBorderColor:   ['#9fd8ff', bold]
+    inactiveBorderColor: ['#333333']
+    searchingActiveBorderColor: ['#9fd8ff', bold]
+    optionsTextColor:    ['#707070']
+    selectedLineBgColor: ['#141414']
+    inactiveViewSelectedLineBgColor: ['#0a0a0a']
+    cherryPickedCommitBgColor: ['#1e1e1e']
+    cherryPickedCommitFgColor: ['#9fd8ff']
+    markedBaseCommitBgColor:   ['#1e1e1e']
+    markedBaseCommitFgColor:   ['#9fd8ff']
+    unstagedChangesColor: ['#b0a0a0']
+    defaultFgColor:       ['#d8d8d8']
+  authorColors:
+    "*": "#909090"
+git:
+  paging:
+    colorArg: always
+    pager: delta --dark --paging=never --line-numbers

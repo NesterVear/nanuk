@@ -4,25 +4,31 @@
 neovim
 lazygit
 lazydocker
+git-delta          # diffs bonitos (lazygit/git lo usan)
 github-cli
+gum                # bloques interactivos para los scripts de Nanuk
 
 # Contenedores
 docker
 docker-compose
 docker-buildx
 
-# Lenguajes y gestores
+# Lenguajes que van a nivel de sistema
 python
 python-pip
 uv
 php
 composer
+r
 nodejs
 npm
-mise
 lua
 luarocks
 tree-sitter-cli
+
+# Gestores de versiones (para tener varias versiones de cada lenguaje)
+mise               # node / python / go / ruby / java...  → `nanuk lang`
+rustup             # toolchains de Rust                   → `nanuk lang rust`
 
 # Base de datos
 mariadb

@@ -19,6 +19,13 @@ alias lg='lazygit'
 alias ld='lazydocker'
 alias dc='docker compose'
 
+# ── El oso al abrir la terminal ────────────────────────────────────
+# Solo en terminales "de verdad" (no en tmux, ni dentro de nvim, ni en VS Code).
+if [[ -z "${TMUX:-}" && -z "${NVIM:-}" && "${TERM_PROGRAM:-}" != "vscode" ]] \
+   && command -v fastfetch >/dev/null; then
+  fastfetch
+fi
+
 # ── Herramientas interactivas ──────────────────────────────────────
 command -v starship >/dev/null && eval "$(starship init bash)"
 command -v zoxide   >/dev/null && eval "$(zoxide init bash)"     # `z carpeta`

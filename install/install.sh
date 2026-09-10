@@ -33,8 +33,11 @@ echo "╚═══════════════════════�
 echo "raíz del repo: $NANUK_ROOT"
 echo
 
-# Pedimos sudo una vez al principio para que no interrumpa a media instalación.
+# Pedimos sudo una vez al principio y lo mantenemos vivo en segundo plano:
+# la caché de sudo caduca a los 15 min y el paso 03 tarda más que eso.
+# `sudo -n true` refresca sin preguntar; el bucle muere cuando muere este script.
 sudo -v
+( while kill -0 $$ 2>/dev/null; do sudo -n true 2>/dev/null; sleep 60; done ) &
 
 for step in "${STEPS[@]}"; do
   echo

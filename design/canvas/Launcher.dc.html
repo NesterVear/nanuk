@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cascadia+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #000000; }
+    a { color: #ffffff; } a:hover { color: #9fd8ff; }
+    .mono { font-family: "Cascadia Mono", "CaskaydiaMono Nerd Font", ui-monospace, monospace; }
+    .ico { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</helmet>
+<div class="mono" style="position: relative; width: 1366px; height: 768px; background: #000000; color: #ffffff; overflow: hidden; font-size: 12px;">
+
+  <!-- waybar -->
+  <div style="position: absolute; left: 0; top: 0; width: 1366px; height: 24px; display: flex; align-items: center; justify-content: space-between; background: #000000;">
+    <div style="display: flex; align-items: stretch; height: 24px;">
+      <div style="display: flex; align-items: center; padding: 0 9px; color: #ffffff; box-shadow: inset 0 -2px #ffffff;">1</div>
+      <div style="display: flex; align-items: center; padding: 0 9px; color: #707070;">2</div>
+      <div style="display: flex; align-items: center; padding: 0 12px 0 10px; color: #707070;">
+        <svg class="ico" viewBox="0 0 16 16"><rect x="1.5" y="4" width="13" height="8" rx="1"></rect><path d="M4 7h1M7 7h1M10 7h1M4 9.5h8"></path></svg>
+      </div>
+    </div>
+    <div style="padding: 0 12px; color: #ffffff;">mar 09/09  ·  22:43</div>
+    <div style="display: flex; align-items: center; color: #ffffff;">
+      <div style="padding: 0 10px;"><svg class="ico" viewBox="0 0 16 16"><path d="M2 6.5a9 9 0 0 1 12 0M4.5 9a5.5 5.5 0 0 1 7 0M6.8 11.5a2 2 0 0 1 2.4 0"></path></svg></div>
+      <div style="padding: 0 10px; display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><path d="M2 6h3l4-3v10l-4-3H2zM11 6a3 3 0 0 1 0 4"></path></svg><span>45%</span></div>
+      <div style="padding: 0 10px; display: flex; align-items: center; gap: 8px;"><svg class="ico" viewBox="0 0 16 16"><rect x="1.5" y="4.5" width="11" height="7" rx="1"></rect><path d="M13.5 7v2"></path><rect x="3" y="6" width="6" height="4" fill="currentColor" stroke="none"></rect></svg><span>76%</span></div>
+    </div>
+  </div>
+
+  <!-- ventanas de fondo (sin foco: el foco lo tiene el launcher) -->
+  <div style="position: absolute; left: 0; top: 24px; width: 683px; height: 744px; box-sizing: border-box; border: 1px solid #1a1a1a; background: #000000; padding: 8px; line-height: 18px; font-size: 14px; color: #ffffff; white-space: pre;"><span style="font-weight: 700;">nanuk</span><span style="color: #909090; font-style: italic;"> main </span>
+<span style="font-weight: 700;">❯</span> </div>
+  <div style="position: absolute; left: 683px; top: 24px; width: 683px; height: 744px; box-sizing: border-box; border: 1px solid #1a1a1a; background: #000000;"></div>
+
+  <!-- wofi: 560 px, centrado, borde #333, padding 12, 9 líneas, 13 px -->
+  <div style="position: absolute; left: 403px; top: 234px; width: 560px; box-sizing: border-box; background: #000000; border: 1px solid #333333; padding: 12px; font-size: 13px;">
+    <div style="display: flex; align-items: center; gap: 8px; padding: 8px 6px; margin-bottom: 8px; border-bottom: 1px solid #1a1a1a; color: #ffffff;">
+      <span>fi</span><span style="display: inline-block; width: 7px; height: 15px; background: #ffffff;"></span>
+    </div>
+    <div style="display: flex; flex-direction: column;">
+      <div style="padding: 6px 8px; background: #141414; color: #ffffff;">Firefox</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">Archivos</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">FreeCAD</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">Configuración de red (nmtui)</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">File Roller</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">Visual Studio Code</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">Fuentes</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">Evince</div>
+      <div style="padding: 6px 8px; color: #b0b0b0;">OrcaSlicer</div>
+    </div>
+  </div>
+
+  <!-- menú de energía (SUPER+ESC): wofi dmenu 260x230 -->
+  <div style="position: absolute; left: 1040px; top: 300px; width: 260px; height: 230px; box-sizing: border-box; background: #000000; border: 1px solid #333333; padding: 12px; font-size: 13px; display: flex; flex-direction: column;">
+    <div style="padding: 8px 6px; margin-bottom: 8px; border-bottom: 1px solid #1a1a1a; color: #ffffff;"><span style="display: inline-block; width: 7px; height: 15px; background: #ffffff;"></span></div>
+    <div style="padding: 6px 8px; background: #141414; color: #ffffff;">Bloquear</div>
+    <div style="padding: 6px 8px; color: #b0b0b0;">Suspender</div>
+    <div style="padding: 6px 8px; color: #b0b0b0;">Cerrar sesión</div>
+    <div style="padding: 6px 8px; color: #b0b0b0;">Reiniciar</div>
+    <div style="padding: 6px 8px; color: #b0b0b0;">Apagar</div>
+  </div>
+  <div style="position: absolute; left: 1040px; top: 540px; width: 260px; color: #707070; font-size: 11px; line-height: 16px;">SUPER + ESC → menú de energía<br>SUPER + ESPACIO → launcher</div>
+</div>
+</x-dc>
+</body>
+</html>

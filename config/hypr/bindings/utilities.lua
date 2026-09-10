@@ -1,5 +1,8 @@
 -- Nanuk — utilidades: capturas, portapapeles, bloqueo, apagado, barra.
 
+-- Chuleta de atajos de teclado (también en el icono 󰌌 de la barra).
+n.bind("SUPER + K", "Atajos de teclado", "nanuk-keys")
+
 -- Sistema.
 n.bind("SUPER + ESCAPE", "Menú de energía", n.apps.power_menu)
 n.bind("SUPER + CTRL + L", "Bloquear pantalla", "hyprlock")

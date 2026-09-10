@@ -3,7 +3,8 @@
 # Basado en el tema de Omarchy (MIT — https://github.com/basecamp/omarchy):
 # se conserva su lógica de progreso (falso hasta que el kernel da progreso
 # real) y de diálogo de contraseña LUKS. Cambios de Nanuk: fondo negro,
-# wordmark, y la barra de progreso es Pac-Man comiéndose una fila de monedas.
+# wordmark con el oso, y una barra de progreso de una sola línea, sobria.
+# (El Pac-Man vive solo en la terminal: ILoveCandy en pacman.conf.)
 #
 # Lenguaje: plymouth-script.
 # https://www.freedesktop.org/wiki/Software/Plymouth/Scripts/
@@ -13,6 +14,12 @@ Window.SetBackgroundBottomColor(0, 0, 0);
 
 # ── Logo (wordmark) centrado ────────────────────────────────────────
 logo.image = Image("logo.png");
+# Escalar el wordmark a ~62% del ancho de pantalla: identidad rotunda,
+# no tímida, y consistente en cualquier resolución.
+logo.target_w = Window.GetWidth() * 0.62;
+logo.scale = logo.target_w / logo.image.GetWidth();
+logo.image = logo.image.Scale(logo.image.GetWidth() * logo.scale,
+                              logo.image.GetHeight() * logo.scale);
 logo.sprite = Sprite(logo.image);
 logo.sprite.SetX(Window.GetWidth() / 2 - logo.image.GetWidth() / 2);
 logo.sprite.SetY(Window.GetHeight() / 2 - logo.image.GetHeight() / 2);
@@ -20,9 +27,9 @@ logo.sprite.SetOpacity(1);
 
 # ── Estado ──────────────────────────────────────────────────────────
 # Mientras el disco se descifra el kernel no reporta progreso: la barra
-# (Pac-Man) avanza sola hasta fake_progress_limit y luego cede al progreso
-# real cuando este la supera.
-global.fake_progress_limit = 0.7;      # hasta dónde llega solo (0.0 - 1.0)
+# avanza sola hasta fake_progress_limit y luego cede al progreso real
+# cuando este la supera.
+global.fake_progress_limit = 0.7;      # hasta dónde llega sola (0.0 - 1.0)
 global.fake_progress_duration = 15.0;  # en cuántos segundos
 
 global.animation_frame = 0;
@@ -30,22 +37,12 @@ global.fake_progress = 0.0;
 global.real_progress = 0.0;
 global.fake_progress_active = 0;
 global.fake_progress_start_time = 0.0;
-global.password_shown = 0;
 global.max_progress = 0.0;   # nunca retrocede
-global.chomp = 0;            # contador para alternar la boca
-global.pac_visible = 0;
+global.progress_started = 0; # el progreso ya arrancó (para no reiniciarlo)
 
 # ── Bucle de animación (≈50 FPS) ────────────────────────────────────
 fun refresh_callback() {
   global.animation_frame++;
-
-  # Masticar: ~5 mordiscos por segundo (50 FPS / 10).
-  global.chomp++;
-  if (global.chomp >= 10) global.chomp = 0;
-  if (global.pac_visible == 1) {
-    if (global.chomp < 5) pac.sprite.SetImage(pac.image_a);
-    else pac.sprite.SetImage(pac.image_b);
-  }
 
   if (global.fake_progress_active == 1) {
     elapsed_time = global.animation_frame / 50.0;
@@ -55,7 +52,7 @@ fun refresh_callback() {
     # ease-out cuadrático: 1 - (1 - x)^2
     eased_ratio = 1 - ((1 - time_ratio) * (1 - time_ratio));
     global.fake_progress = eased_ratio * global.fake_progress_limit;
-    update_pac(global.fake_progress);
+    update_progress_bar(global.fake_progress);
   }
 }
 
@@ -63,32 +60,27 @@ Plymouth.SetRefreshFunction(refresh_callback);
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
-# Mueve a Pac-Man a la posición del progreso y "come" las monedas que deja atrás.
-fun update_pac(progress) {
+# Estira la línea blanca hasta el porcentaje de progreso.
+fun update_progress_bar(progress) {
   if (progress > global.max_progress) {
     global.max_progress = progress;
 
-    x = track.x + progress * track.width;
-    pac.sprite.SetX(x);
+    width = Math.Int(progress_bar.original_image.GetWidth() * progress);
+    if (width < 1) width = 1;
 
-    for (i = 0; i < track.count; i++) {
-      if (pellet.px[i] < x + 4) pellet.sprites[i].SetOpacity(0);
-    }
+    progress_bar.image = progress_bar.original_image.Scale(width, progress_bar.original_image.GetHeight());
+    progress_bar.sprite.SetImage(progress_bar.image);
   }
 }
 
-fun show_pac() {
-  global.pac_visible = 1;
-  global.max_progress = 0.0;
-  pac.sprite.SetX(track.x);
-  pac.sprite.SetOpacity(1);
-  for (i = 0; i < track.count; i++) pellet.sprites[i].SetOpacity(1);
+fun show_progress_bar() {
+  progress_box.sprite.SetOpacity(1);
+  progress_bar.sprite.SetOpacity(1);
 }
 
-fun hide_pac() {
-  global.pac_visible = 0;
-  pac.sprite.SetOpacity(0);
-  for (i = 0; i < track.count; i++) pellet.sprites[i].SetOpacity(0);
+fun hide_progress_bar() {
+  progress_box.sprite.SetOpacity(0);
+  progress_bar.sprite.SetOpacity(0);
 }
 
 fun show_password_dialog() {
@@ -130,17 +122,20 @@ fun display_normal_callback() {
   hide_password_dialog();
 
   mode = Plymouth.GetMode();
-  if ((mode == "boot" || mode == "resume") && global.password_shown == 1) {
-    show_pac();
-    start_fake_progress();
+  if (mode == "boot" || mode == "resume") {
+    show_progress_bar();
+    if (global.progress_started == 0) {
+      global.progress_started = 1;
+      start_fake_progress();
+    }
   }
 }
 
 fun display_password_callback(prompt, bullets) {
-  global.password_shown = 1;
 
   stop_fake_progress();
-  hide_pac();
+  hide_progress_bar();
+  global.progress_started = 0;
   show_password_dialog();
 
   for (index = 0; bullet.sprites[index]; index++) {
@@ -166,35 +161,22 @@ fun display_password_callback(prompt, bullets) {
 Plymouth.SetDisplayNormalFunction(display_normal_callback);
 Plymouth.SetDisplayPasswordFunction(display_password_callback);
 
-# ── Pac-Man y su pista de monedas ──────────────────────────────────
-pac.image_a = Image("pac_a.png");   # boca casi cerrada
-pac.image_b = Image("pac_b.png");   # boca abierta
-pac.h = pac.image_a.GetHeight();
-
-track.width = 420;
-track.count = 16;
-track.x = Window.GetWidth() / 2 - track.width / 2;
+# ── Barra de progreso: una línea gris (pista) y una blanca que crece ─
 # A la misma altura que el campo de contraseña (se turnan en el tiempo).
-track.y = entry.y + entry.image.GetHeight() / 2 - pac.h / 2;
+progress_box.image = Image("progress_box.png");
+progress_box.sprite = Sprite(progress_box.image);
+progress_box.x = Window.GetWidth() / 2 - progress_box.image.GetWidth() / 2;
+progress_box.y = entry.y + entry.image.GetHeight() / 2 - progress_box.image.GetHeight() / 2;
+progress_box.sprite.SetPosition(progress_box.x, progress_box.y, 4);
+progress_box.sprite.SetOpacity(0);
 
-pac.sprite = Sprite();
-pac.sprite.SetImage(pac.image_a);
-pac.sprite.SetPosition(track.x, track.y, 5);
-pac.sprite.SetOpacity(0);
-
-pellet.image = Image("pellet.png");
-pellet.h = pellet.image.GetHeight();
-pellet.sprites = [];
-pellet.px = [];
-spacing = track.width / (track.count + 1);
-
-for (i = 0; i < track.count; i++) {
-  px = track.x + (i + 1) * spacing;
-  pellet.px[i] = px;
-  pellet.sprites[i] = Sprite(pellet.image);
-  pellet.sprites[i].SetPosition(px, track.y + pac.h / 2 - pellet.h / 2, 4);
-  pellet.sprites[i].SetOpacity(0);
-}
+progress_bar.original_image = Image("progress_bar.png");
+progress_bar.image = progress_bar.original_image.Scale(1, progress_bar.original_image.GetHeight());
+progress_bar.sprite = Sprite(progress_bar.image);
+progress_bar.x = progress_box.x;
+progress_bar.y = progress_box.y;
+progress_bar.sprite.SetPosition(progress_bar.x, progress_bar.y, 5);
+progress_bar.sprite.SetOpacity(0);
 
 # ── Progreso real del kernel ───────────────────────────────────────
 fun progress_callback(duration, progress) {
@@ -205,7 +187,7 @@ fun progress_callback(duration, progress) {
 
   if (duration > global.fake_progress_start_time && progress > global.fake_progress) {
     stop_fake_progress();
-    update_pac(progress);
+    update_progress_bar(progress);
   }
 }
 

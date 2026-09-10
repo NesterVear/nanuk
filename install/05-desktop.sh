@@ -19,8 +19,9 @@ THEME_SRC="$NANUK_ROOT/themes/nanuk/plymouth"
 THEME_DST="/usr/share/plymouth/themes/nanuk"
 
 echo "→ Instalando tema Plymouth en $THEME_DST"
-sudo install -d "$THEME_DST"
-sudo install -m 644 "$THEME_SRC"/* "$THEME_DST"/
+# rsync --delete: espejo exacto del tema del repo. Así, si un asset desaparece
+# del tema (como pasó con el Pac-Man), también desaparece del sistema.
+sudo rsync -a --delete --chmod=D755,F644 "$THEME_SRC/" "$THEME_DST/"
 
 # El hook `plymouth` debe ir justo después de `udev` (o de `systemd` si el
 # initramfs usa ese hook) y ANTES de `encrypt`/`sd-encrypt`, para que el
@@ -46,6 +47,17 @@ add_kernel_params() {
       grep -qw "$p" /etc/kernel/cmdline || sudo sed -i "s/\$/ $p/" /etc/kernel/cmdline
     done
     echo "✔ kernel params en /etc/kernel/cmdline"
+  elif [[ -f /etc/default/limine ]]; then
+    # Limine con limine-mkinitcpio-hook (lo que usan Omarchy y archinstall):
+    # la línea del kernel se declara en este archivo y `limine-update`
+    # regenera /boot/limine.conf con ella en cada actualización del kernel.
+    # Editar limine.conf a mano se perdería en el siguiente kernel.
+    for p in "$@"; do
+      grep -qE "^KERNEL_CMDLINE\[default\].*\b$p\b" /etc/default/limine \
+        || echo "KERNEL_CMDLINE[default]+=\" $p\"" | sudo tee -a /etc/default/limine >/dev/null
+    done
+    command -v limine-update &>/dev/null && sudo limine-update
+    echo "✔ kernel params en /etc/default/limine"
   elif compgen -G "/boot/loader/entries/*.conf" >/dev/null; then
     # systemd-boot: cada entrada tiene su línea `options`.
     local f
@@ -62,6 +74,16 @@ add_kernel_params() {
     done
     sudo grub-mkconfig -o /boot/grub/grub.cfg
     echo "✔ kernel params en GRUB"
+  elif compgen -G "/boot/limine.conf" >/dev/null || compgen -G "/boot/EFI/limine/limine.conf" >/dev/null; then
+    # Limine sin el hook: se añade a cada línea `cmdline:` que no lo tenga.
+    local f
+    for f in /boot/limine.conf /boot/EFI/limine/limine.conf; do
+      [[ -f "$f" ]] || continue
+      for p in "$@"; do
+        sudo sed -i -E "/^[[:space:]]*cmdline:/{/\b$p\b/!s/\$/ $p/}" "$f"
+      done
+    done
+    echo "✔ kernel params en limine.conf"
   else
     echo "⚠ bootloader no reconocido: añade a mano 'quiet splash' a la línea del kernel"
   fi
@@ -73,9 +95,10 @@ echo "→ plymouth-set-default-theme -R nanuk (regenera initramfs, tarda un poco
 sudo plymouth-set-default-theme -R nanuk
 
 # ── 2. Autologin tty1 → uwsm → Hyprland ─────────────────────────────
-# El disco ya pide contraseña (LUKS) y hyprlock bloquea la sesión, así que
-# un greeter solo añadiría una pantalla más. agetty inicia sesión sola en
-# tty1 y ~/.bash_profile arranca Hyprland si estamos en esa tty.
+# Si cifraste el disco (LUKS) ya tecleas la contraseña en el arranque; si no,
+# no hay contraseña y se entra directo. En ambos casos hyprlock bloquea la
+# sesión, así que un display manager solo sería una pantalla de más. agetty
+# inicia sesión sola en tty1 y ~/.bash_profile lanza Hyprland en esa tty.
 GETTY_DIR=/etc/systemd/system/getty@tty1.service.d
 sudo install -d "$GETTY_DIR"
 sudo tee "$GETTY_DIR/autologin.conf" >/dev/null <<EOF
@@ -109,10 +132,14 @@ EOF
 fi
 
 # ── 3. Apps por defecto ─────────────────────────────────────────────
-# xdg-settings/xdg-mime escriben en ~/.config/mimeapps.list.
-if [[ -f /usr/share/applications/brave-browser.desktop ]]; then
-  xdg-settings set default-web-browser brave-browser.desktop || true
-fi
+# xdg-settings/xdg-mime escriben en ~/.config/mimeapps.list. El primero que
+# exista gana; el usuario lo cambia luego con `xdg-settings set ...`.
+for d in firefox.desktop brave-origin.desktop brave-browser.desktop chromium.desktop; do
+  if [[ -f "/usr/share/applications/$d" \
+     || -f "$HOME/.local/share/flatpak/exports/share/applications/$d" ]]; then
+    xdg-settings set default-web-browser "$d" && break || true
+  fi
+done
 xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
 
 echo "✔ Escritorio (sistema) configurado"

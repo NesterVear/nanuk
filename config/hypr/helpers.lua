@@ -12,7 +12,7 @@ n = n or {}
 n.apps = {
   terminal = "foot",
   terminal_alt = "kitty",
-  launcher = "wofi --show drun",
+  launcher = "wofi",
   -- gtk-launch abre el .desktop del navegador por defecto (xdg-settings).
   browser = 'gtk-launch "$(xdg-settings get default-web-browser)"',
   files = "nautilus --new-window",

@@ -25,6 +25,9 @@ NANUK_CFG="$HOME/.config/nanuk"
 mkdir -p "$NANUK_CFG"
 rsync -a --delete "$NANUK_ROOT/config/" "$NANUK_CFG/default/"
 rsync -a --delete "$NANUK_ROOT/themes/" "$NANUK_CFG/themes/"
+# Los scripts que las apps ejecutan (waybar/weather.sh...) deben ser ejecutables
+# aunque el repo se haya clonado/copiado perdiendo el bit +x.
+find "$NANUK_CFG/default" "$NANUK_CFG/themes" -name '*.sh' -exec chmod +x {} +
 echo "✔ default/ y themes/ actualizados"
 
 # ── 2. Capa user: solo lo que falte ────────────────────────────────
@@ -73,8 +76,18 @@ link_layered "$HOME/.config/wofi"                wofi
 link_layered "$HOME/.config/hypr/hyprlock.conf"  hypr/hyprlock.conf
 link_layered "$HOME/.config/hypr/hypridle.conf"  hypr/hypridle.conf
 link_layered "$HOME/.config/gtk-3.0/settings.ini" gtk-3.0/settings.ini
+link_layered "$HOME/.config/gtk-3.0/gtk.css"      gtk-3.0/gtk.css
 link_layered "$HOME/.config/gtk-4.0/settings.ini" gtk-4.0/settings.ini
-link_layered "$HOME/.config/starship.toml"       starship.toml
+link_layered "$HOME/.config/gtk-4.0/gtk.css"      gtk-4.0/gtk.css
+link_layered "$HOME/.config/starship.toml"        starship.toml
+link_layered "$HOME/.config/lazygit/config.yml"    lazygit/config.yml
+link_layered "$HOME/.config/lazydocker/config.yml" lazydocker/config.yml
+link_layered "$HOME/.config/fastfetch"             fastfetch
+# btop reescribe btop.conf al salir: por eso el .conf se COPIA (solo si falta)
+# y únicamente el tema se enlaza.
+mkdir -p "$HOME/.config/btop/themes"
+link_layered "$HOME/.config/btop/themes/nanuk.theme" btop/nanuk.theme
+cp -n "$NANUK_CFG/default/btop/btop.conf" "$HOME/.config/btop/btop.conf"
 echo "✔ enlaces de apps creados"
 
 # ── 5. Hyprland: archivo de entrada ────────────────────────────────

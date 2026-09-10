@@ -26,6 +26,11 @@ sudo sed -i \
   -e 's/^#ParallelDownloads.*/ParallelDownloads = 10/' \
   /etc/pacman.conf
 
+# ILoveCandy: la barra de progreso de pacman pasa a ser Pac-Man comiéndose
+# los puntos (C·····). Guiño clásico de Arch. Se añade bajo [options].
+grep -q '^ILoveCandy' /etc/pacman.conf \
+  || sudo sed -i '/^\[options\]/a ILoveCandy' /etc/pacman.conf
+
 echo "→ Actualizando el sistema..."
 sudo pacman -Syu --noconfirm
 
@@ -72,7 +77,9 @@ install_paru() {
 
   echo "⚠ paru-bin no arranca (desajuste de libalpm). Compilando paru desde fuente..."
   sudo pacman -Rns --noconfirm paru-bin || true
-  sudo pacman -S --noconfirm --needed rust   # 'rust' trae cargo
+  # rustup (no 'rust': chocan, y dev.txt ya trae rustup). Toolchain mínimo.
+  sudo pacman -S --noconfirm --needed rustup
+  rustup default stable 2>/dev/null || rustup toolchain install stable
 
   # Compilar Rust en una VM con poca RAM la mata: rustc muere con SIGKILL
   # (el OOM killer). Dos defensas:

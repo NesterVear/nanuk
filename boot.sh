@@ -26,9 +26,12 @@ echo
 
 # git es lo único que necesitamos aquí; en un Arch recién instalado puede
 # no venir. --needed hace que no reinstale si ya está (idempotencia).
+# -Syu y no -Sy: en Arch instalar un paquete tras refrescar las listas sin
+# actualizar el resto ("partial upgrade") puede romper librerías. El paso 02
+# actualiza todo igualmente, así que aquí no cuesta nada más.
 if ! command -v git &>/dev/null; then
   echo "→ Instalando git..."
-  sudo pacman -Sy --noconfirm --needed git
+  sudo pacman -Syu --noconfirm --needed git
 fi
 
 if [[ -d "$NANUK_DIR/.git" ]]; then
