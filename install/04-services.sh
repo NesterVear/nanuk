@@ -47,7 +47,10 @@ fi
 # virt-manager o virsh se conectan por primera vez.
 if pacman -Qq libvirt &>/dev/null; then
   echo "→ Configurando libvirt..."
-  sudo systemctl enable --now libvirtd.socket
+  # enable y start por separado: dentro de un chroot (instalación desde la
+  # ISO) no hay systemd corriendo y `start` falla; `enable` sí funciona.
+  sudo systemctl enable libvirtd.socket
+  sudo systemctl start libvirtd.socket || echo "  (libvirtd.socket arrancará en el próximo boot)"
 
   # Grupos: 'libvirt' para gestionar VMs sin sudo; 'kvm' para /dev/kvm.
   for grp in libvirt kvm; do
@@ -76,7 +79,8 @@ if [[ ! -d /var/lib/mysql/mysql ]]; then
   echo "→ Inicializando MariaDB..."
   sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 fi
-sudo systemctl enable --now mariadb
+sudo systemctl enable mariadb
+sudo systemctl start mariadb || echo "  (mariadb arrancará en el próximo boot)"
 fi
 
 # ── zram: swap comprimida en RAM ───────────────────────────────────

@@ -15,6 +15,7 @@
 #   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
 #   nanuk menu                   menú interactivo: paquetes, apps web, lenguajes...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
+#   nanuk bg [<fondo>|next|none]  fondo de pantalla: lista, cambia, rota, negro puro
 #   nanuk edit                   abre tu capa de config en $EDITOR
 #   nanuk doctor                 diagnóstico rápido del sistema
 #   nanuk help
@@ -276,6 +277,7 @@ cmd_menu() {
       "Añadir una app web (nombre + URL)" \
       "Quitar una app web" \
       "Instalar un lenguaje" \
+      "Cambiar el fondo de pantalla" \
       "Actualizar el sistema" \
       "Diagnóstico (doctor)" \
       "Salir")" || return 0
@@ -310,6 +312,12 @@ cmd_menu() {
         local lang
         lang="$(gum choose --header "lenguaje" rust node python go ruby java php r)" || continue
         cmd_lang "$lang" || true ;;
+      "Cambiar el fondo de pantalla")
+        local bg
+        bg="$( { "$REPO/bin/nanuk-bg" names; echo "none  (negro puro, sin imagen)"; } \
+              | gum choose --header "fondo de pantalla (los tuyos van en ~/.config/nanuk/user/backgrounds/)")" || continue
+        [[ -n "$bg" ]] || continue
+        "$REPO/bin/nanuk-bg" "${bg%%  *}" || true ;;
       "Actualizar el sistema")
         gum confirm "¿Actualizar sistema, AUR, flatpak y config por defecto?" && { cmd_update || true; } ;;
       "Diagnóstico (doctor)")
@@ -427,6 +435,7 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk webapp remove <nombre> | list
   nanuk menu                   menú interactivo con todo lo anterior (también Super+Shift+I)
   nanuk theme [<tema>]         lista temas / cambia el activo
+  nanuk bg [<fondo>|next|none] fondo de pantalla: lista / cambia / rota (Super+Shift+B) / negro puro
   nanuk lang [<lenguaje...>]   instala/lista lenguajes (rust node python go php r ...)
   nanuk keys                   chuleta de atajos de teclado (también Super+K)
   nanuk edit                   abre tu capa de config (~/.config/nanuk/user) en $EDITOR
@@ -444,6 +453,7 @@ case "$cmd" in
   sync)        cmd_sync ;;
   update|up)   cmd_update ;;
   theme)       cmd_theme "$@" ;;
+  bg|background) exec "$REPO/bin/nanuk-bg" "$@" ;;
   webapp|web)  cmd_webapp "$@" ;;
   menu|m)      cmd_menu ;;
   lang)        cmd_lang "$@" ;;

@@ -1,0 +1,553 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# nanuk-install — el instalador de la ISO de Nanuk 🐻‍❄️
+#
+# Corre como root en el entorno vivo (arranca solo en tty1). Hace, en orden:
+#   1. Preflight: UEFI, red (con ayuda para Wi-Fi), hora.
+#   2. Preguntas: teclado, idioma, zona horaria, nombre del equipo, usuario.
+#   3. Almacenamiento, dos modos (decisión del plan, Fase 8):
+#        · Por defecto: un disco entero → EFI 1 GB + / (resto). Borra todo.
+#        · Personalizado: eliges partición por punto de montaje (EFI, /, /home,
+#          swap). Permite conservar un /home existente sin formatear (así se
+#          pasa de Omarchy a Nanuk sin perder archivos) y /home cifrado.
+#      Opcional: LUKS para / y ext4 o btrfs (subvolúmenes @ y @home).
+#   4. pacstrap del sistema base + Limine con UKI (mkinitcpio).
+#   5. El repo de Nanuk (viaja dentro de la ISO) se copia al $HOME del usuario
+#      y se ejecuta install/install.sh en el chroot: los mismos pasos 01-07
+#      que la instalación por curl. Sin lógica duplicada.
+#
+# Sin magia: cada bloque es lo que harías a mano siguiendo la wiki de Arch.
+# Con NANUK_DRY=1 se detiene antes de tocar ningún disco (para probar las
+# preguntas). El log completo queda en /var/log/nanuk-install.log del sistema.
+# ─────────────────────────────────────────────────────────────────────
+set -Eeuo pipefail
+
+NANUK_SRC=/usr/local/share/nanuk        # copia del repo dentro de la ISO
+MNT=/mnt
+LOG=/tmp/nanuk-install.log
+
+# ── Estética: negro, blanco, un solo acento (hielo) ─────────────────
+ICE="#9fd8ff"; GRAY="#909090"
+export GUM_CHOOSE_CURSOR_FOREGROUND="$ICE" GUM_CHOOSE_HEADER_FOREGROUND="$GRAY" \
+       GUM_CHOOSE_SELECTED_FOREGROUND="#ffffff" GUM_INPUT_CURSOR_FOREGROUND="$ICE" \
+       GUM_INPUT_PROMPT_FOREGROUND="$GRAY" GUM_INPUT_HEADER_FOREGROUND="$GRAY" \
+       GUM_CONFIRM_SELECTED_BACKGROUND="$ICE" GUM_CONFIRM_SELECTED_FOREGROUND="#000000" \
+       GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e" GUM_FILTER_INDICATOR_FOREGROUND="$ICE" \
+       GUM_FILTER_MATCH_FOREGROUND="$ICE" GUM_FILTER_HEADER_FOREGROUND="$GRAY"
+
+step() { echo; gum style --foreground "$ICE" --bold "━━ $* ━━"; }
+say()  { echo "  ▶ $*"; }
+warn() { echo "  ⚠ $*" >&2; }
+die()  { echo; gum style --foreground "$ICE" --bold "✖ $*"; echo; EXPLAINED=1; exit 1; }
+# Cualquier salida con error que no haya pasado por die() o por el trap ERR
+# (p. ej. un `set -e` en la fase de preguntas) al menos dice dónde fue.
+EXPLAINED=0
+# shellcheck disable=SC2154  # rc se asigna dentro del propio trap
+trap 'rc=$?; (( rc == 0 || EXPLAINED )) || echo "✖ nanuk-install terminó con código $rc en la línea $LINENO. Log: $LOG" >&2' EXIT
+ask()      { gum input --header "$1" "${@:2}"; }
+choose()   { gum choose --header "$1" "${@:2}"; }
+confirm()  { gum confirm "$1" "${@:2}"; }
+
+# Si algo falla a partir de "prepare_disks", decir dónde y dejar el log a mano.
+# El disco queda montado en /mnt para poder mirar.
+on_error() {
+  local line="$1" cmd="$2"
+  # shellcheck disable=SC2034  # lo lee el trap EXIT
+  EXPLAINED=1
+  { echo; echo "✖ nanuk-install se detuvo en la línea $line:"; echo "    $cmd"; } >&2
+  if mountpoint -q "$MNT" 2>/dev/null; then
+    mkdir -p "$MNT/var/log" && cp "$LOG" "$MNT/var/log/nanuk-install.log" 2>/dev/null || true
+    echo "  El disco sigue montado en $MNT. Log: $LOG (copiado a $MNT/var/log/nanuk-install.log)" >&2
+  else
+    echo "  Log: $LOG" >&2
+  fi
+  echo "  Últimas líneas del log:" >&2
+  tail -n 15 "$LOG" 2>/dev/null | sed 's/^/    /' >&2
+  echo "  Arregla la causa y vuelve a lanzar: nanuk-install" >&2
+}
+
+banner() {
+  clear
+  gum style --foreground "$ICE" --bold --padding "1 2" \
+    "N A N U K" "" "Un oso polar en la oscuridad absoluta."
+  echo "  Instalador. Arch Linux + Hyprland, negro, un solo acento."
+  echo "  Las preguntas van primero; no se toca ningún disco hasta que confirmes."
+  echo
+}
+
+# ── 1. Preflight ────────────────────────────────────────────────────
+preflight() {
+  step "Comprobaciones"
+  [[ $EUID -eq 0 ]] || die "nanuk-install debe correr como root (en la ISO ya lo eres)."
+  [[ -d /sys/firmware/efi/efivars ]] \
+    || die "Este equipo arrancó en modo BIOS/CSM. Nanuk necesita UEFI: activa UEFI en el firmware y arranca la ISO de nuevo."
+  [[ -d "$NANUK_SRC/install" ]] || die "No encuentro el repo de Nanuk en $NANUK_SRC (¿ISO mal construida?)."
+  say "UEFI ✔"
+
+  while ! curl -sfI --max-time 8 https://archlinux.org >/dev/null; do
+    warn "sin conexión a internet (hace falta para descargar los paquetes)"
+    case "$(choose "Red" "Conectar a una Wi-Fi" "Reintentar (Ethernet conecta sola)" "Salir a la terminal")" in
+      "Conectar a una Wi-Fi") wifi ;;
+      "Salir a la terminal")  exit 1 ;;
+    esac
+  done
+  say "internet ✔"
+  timedatectl set-ntp true 2>/dev/null || true
+}
+
+wifi() {
+  local dev ssid pass
+  local d; dev=""
+  for d in /sys/class/net/wl*; do [[ -e "$d" ]] && { dev="$(basename "$d")"; break; }; done
+  [[ -n "$dev" ]] || { warn "no veo ninguna tarjeta Wi-Fi (wl*)"; return; }
+  iwctl station "$dev" scan 2>/dev/null || true; sleep 2
+  iwctl station "$dev" get-networks 2>/dev/null | tail -n +5 | head -20 || true
+  ssid="$(ask "Nombre de la red (SSID)")" || return
+  pass="$(ask "Contraseña" --password)" || return
+  iwctl --passphrase "$pass" station "$dev" connect "$ssid" || warn "no conectó; prueba otra vez"
+  sleep 4
+}
+
+# ── 2. Preguntas ────────────────────────────────────────────────────
+questions() {
+  step "Teclado e idioma"
+  KEYMAP="$(choose "Distribución del teclado" us latam es us-intl de fr pt-br "otra…")"
+  [[ "$KEYMAP" == "otra…" ]] && KEYMAP="$(localectl list-keymaps | gum filter --header "Teclado (escribe para filtrar)")"
+  [[ "$KEYMAP" == us-intl ]] && KEYMAP="us-acentos"
+  loadkeys "$KEYMAP" 2>/dev/null || { warn "keymap '$KEYMAP' no cargó; se usa 'us'"; KEYMAP=us; }
+
+  LOCALE="$(choose "Idioma del sistema" es_MX.UTF-8 es_ES.UTF-8 es_AR.UTF-8 es_CO.UTF-8 en_US.UTF-8 "otro…")"
+  [[ "$LOCALE" == "otro…" ]] && LOCALE="$(grep -oE '^#?[a-zA-Z_@0-9-]+\.UTF-8' /etc/locale.gen | tr -d '#' | sort -u | gum filter --header "Locale")"
+
+  local tz_guess; tz_guess="$(curl -sf --max-time 4 https://ipapi.co/timezone 2>/dev/null || true)"
+  [[ -n "$tz_guess" && -f "/usr/share/zoneinfo/$tz_guess" ]] || tz_guess="UTC"
+  TIMEZONE="$(timedatectl list-timezones | gum filter --header "Zona horaria (Enter acepta la sugerida)" --value "$tz_guess")"
+
+  step "Equipo y usuario"
+  HOSTNAME_="$(ask "Nombre del equipo" --value nanuk)"
+  while :; do
+    USERNAME="$(ask "Tu usuario (minúsculas, sin espacios)")"
+    [[ "$USERNAME" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && break
+    warn "nombre no válido"
+  done
+  while :; do
+    PASSWORD="$(ask "Contraseña de $USERNAME (también será la de root)" --password)"
+    local again; again="$(ask "Repite la contraseña" --password)"
+    [[ -n "$PASSWORD" && "$PASSWORD" == "$again" ]] && break
+    warn "no coinciden o está vacía"
+  done
+}
+
+# ── 3. Almacenamiento ───────────────────────────────────────────────
+# Disco del que arrancó la ISO: nunca se ofrece como destino.
+iso_disk() {
+  local src; src="$(findmnt -no SOURCE /run/archiso/bootmnt 2>/dev/null || true)"
+  [[ -n "$src" ]] || return 0
+  local pk; pk="$(lsblk -no PKNAME "$src" 2>/dev/null | head -1)"
+  [[ -n "$pk" ]] && echo "/dev/$pk" || echo "$src"
+}
+list_disks() {
+  local iso; iso="$(iso_disk)"
+  lsblk -dpno NAME,SIZE,MODEL,TYPE | awk -v iso="$iso" '$NF=="disk" && $1!=iso && $1!~/zram/ {$NF=""; print}'
+}
+list_parts() {  # particiones de todos los discos menos el de la ISO
+  local iso; iso="$(iso_disk)"
+  lsblk -pno NAME,SIZE,FSTYPE,TYPE,PKNAME | awk -v iso="$iso" '$4=="part" && ("/dev/" $5)!=iso {printf "%-16s %8s  %s\n",$1,$2,($3==""?"(sin formato)":$3)}'
+}
+fstype_of() { lsblk -no FSTYPE "$1" | head -1; }
+part_path() {  # part_path /dev/nvme0n1 2 → /dev/nvme0n1p2 ; /dev/sda 2 → /dev/sda2
+  [[ "$1" =~ [0-9]$ ]] && echo "${1}p$2" || echo "${1}$2"
+}
+
+ask_root_options() {
+  ENCRYPT=0
+  confirm "¿Cifrar / con LUKS? (pedirá una contraseña al arrancar)" --default=false && ENCRYPT=1
+  if (( ENCRYPT )); then
+    while :; do
+      LUKS_PASS="$(ask "Contraseña de cifrado del disco" --password)"
+      local again; again="$(ask "Repite la contraseña de cifrado" --password)"
+      [[ -n "$LUKS_PASS" && "$LUKS_PASS" == "$again" ]] && break
+      warn "no coinciden o está vacía"
+    done
+  fi
+  case "$(choose "Sistema de archivos para /" "ext4  (simple, el de siempre)" "btrfs (subvolúmenes @ y @home, compresión, snapshots)")" in
+    ext4*)  FS=ext4 ;;
+    btrfs*) FS=btrfs ;;
+  esac
+}
+
+storage_default() {
+  step "Disco (modo por defecto: un disco entero)"
+  local line
+  line="$(list_disks | gum choose --header "Disco de destino — SE BORRARÁ ENTERO")" || die "cancelado"
+  DISK="${line%% *}"
+  ask_root_options
+  EFI_PART="$(part_path "$DISK" 1)"; EFI_FORMAT=1
+  ROOT_PART="$(part_path "$DISK" 2)"
+  HOME_PART=""; HOME_FORMAT=0; HOME_LUKS=0; SWAP_PART=""
+  WIPE_DISK="$DISK"
+}
+
+storage_custom() {
+  step "Disco (modo personalizado: partición por punto de montaje)"
+  echo "  Primero crea las particiones que necesites (cfdisk), después asígnalas."
+  echo "  Mínimo: una EFI (FAT32, ≥ 512 MB) y una para /. Opcionales: /home, swap."
+  while :; do
+    case "$(choose "Particiones" "Ver discos y particiones" "Particionar un disco con cfdisk" "Continuar: asignar particiones")" in
+      "Ver discos y particiones") lsblk -o NAME,SIZE,FSTYPE,LABEL,MOUNTPOINTS; echo; read -rp "  (Enter para seguir) " ;;
+      "Particionar un disco con cfdisk")
+        local line; line="$(list_disks | gum choose --header "Disco a particionar")" || continue
+        cfdisk "${line%% *}"; partprobe 2>/dev/null || true ;;
+      "Continuar: asignar particiones") break ;;
+    esac
+  done
+
+  local line
+  line="$(list_parts | gum choose --header "Partición EFI (FAT32)")" || die "cancelado"
+  EFI_PART="${line%% *}"
+  if [[ "$(fstype_of "$EFI_PART")" == vfat ]]; then
+    EFI_FORMAT=0
+    confirm "¿Formatear la EFI? (No = conservar; otros sistemas que arranquen desde ahí siguen funcionando)" --default=false && EFI_FORMAT=1
+  else
+    EFI_FORMAT=1; say "la EFI no es FAT32: se formateará"
+  fi
+
+  line="$(list_parts | grep -v "^$EFI_PART " | gum choose --header "Partición para /  (SE FORMATEA)")" || die "cancelado"
+  ROOT_PART="${line%% *}"
+  ask_root_options
+
+  HOME_PART=""; HOME_FORMAT=0; HOME_LUKS=0
+  line="$( { echo "Ninguna (/home dentro de /)"; list_parts | grep -vE "^($EFI_PART|$ROOT_PART) "; } | gum choose --header "Partición para /home")" || die "cancelado"
+  if [[ "$line" != Ninguna* ]]; then
+    HOME_PART="${line%% *}"
+    local ft; ft="$(fstype_of "$HOME_PART")"
+    if [[ "$ft" == crypto_LUKS ]]; then
+      HOME_LUKS=1
+      while :; do
+        HOME_PASS="$(ask "/home está cifrado (LUKS). Contraseña para abrirlo" --password)"
+        printf '%s' "$HOME_PASS" | cryptsetup open --test-passphrase "$HOME_PART" - && break
+        warn "contraseña incorrecta"
+      done
+      say "/home cifrado: se conserva tal cual (pedirá su contraseña al arrancar)"
+    elif [[ -z "$ft" ]]; then
+      HOME_FORMAT=1; say "/home sin formato: se formateará ($FS)"
+    else
+      confirm "¿Formatear /home ($ft)? Sí = se borra todo. No = conservar tus archivos." --default=false && HOME_FORMAT=1
+    fi
+  fi
+
+  SWAP_PART=""
+  line="$( { echo "Ninguna (zram hace de swap en RAM)"; list_parts | grep -vE "^($EFI_PART|$ROOT_PART|${HOME_PART:-none}) "; } | gum choose --header "Partición swap")" || die "cancelado"
+  [[ "$line" != Ninguna* ]] && SWAP_PART="${line%% *}"
+  WIPE_DISK=""
+}
+
+storage() {
+  step "Almacenamiento"
+  case "$(choose "¿Cómo repartimos el disco?" \
+      "Por defecto: un disco entero, todo en uno (VM, portátil de un disco)" \
+      "Personalizado: elegir partición por punto de montaje (SSD + HDD, conservar /home…)")" in
+    Por*) storage_default ;;
+    *)    storage_custom ;;
+  esac
+}
+
+# ── Resumen y confirmación ──────────────────────────────────────────
+summary() {
+  step "Resumen"
+  local yn=("no" "sí")
+  {
+    echo "Teclado|$KEYMAP"
+    echo "Idioma|$LOCALE"
+    echo "Zona horaria|$TIMEZONE"
+    echo "Equipo|$HOSTNAME_"
+    echo "Usuario|$USERNAME (sudo)"
+    [[ -n "$WIPE_DISK" ]] && echo "Disco|$WIPE_DISK  ← SE BORRA ENTERO"
+    echo "EFI|$EFI_PART  formatear: ${yn[$EFI_FORMAT]}"
+    echo "/|$ROOT_PART  $FS  formatear: sí  LUKS: ${yn[$ENCRYPT]}"
+    if [[ -n "$HOME_PART" ]]; then
+      (( HOME_LUKS )) && echo "/home|$HOME_PART  cifrado, se conserva" \
+                      || echo "/home|$HOME_PART  formatear: ${yn[$HOME_FORMAT]}"
+    else
+      echo "/home|dentro de /"
+    fi
+    echo "swap|${SWAP_PART:-zram}"
+  } | column -t -s '|' | sed 's/^/  /'
+  echo
+  confirm "¿Instalar Nanuk con esta configuración?" --default=false || die "cancelado, no se ha tocado nada"
+  if [[ -n "$WIPE_DISK" ]]; then
+    local typed; typed="$(ask "Escribe el nombre del disco ($WIPE_DISK) para confirmar el borrado")"
+    [[ "$typed" == "$WIPE_DISK" ]] || die "no coincide, no se ha tocado nada"
+  fi
+  # Ojo: con `set -e`, una última línea `[[ ... ]] && ...` que dé falso mata
+  # el script en silencio. Por eso va con if.
+  if [[ -n "${NANUK_DRY:-}" ]]; then
+    say "NANUK_DRY=1: fin de la prueba, sin tocar discos"; exit 0
+  fi
+}
+
+# ── 4. Particionar, formatear, montar ───────────────────────────────
+prepare_disks() {
+  step "Preparando discos"
+  if [[ -n "$WIPE_DISK" ]]; then
+    say "particionando $WIPE_DISK (GPT: EFI 1 GB + /)"
+    wipefs -af "$WIPE_DISK" >/dev/null
+    sgdisk --zap-all "$WIPE_DISK" >/dev/null
+    # ef00 = EFI System; 8304 = Linux x86-64 root (así systemd la reconoce).
+    sgdisk -n1:0:+1G -t1:ef00 -c1:NANUK_EFI -n2:0:0 -t2:8304 -c2:NANUK_ROOT "$WIPE_DISK" >/dev/null
+    partprobe "$WIPE_DISK"; udevadm settle; sleep 1
+  fi
+
+  (( EFI_FORMAT )) && { say "EFI → FAT32"; mkfs.fat -F32 -n NANUK_EFI "$EFI_PART" >/dev/null; }
+
+  ROOT_DEV="$ROOT_PART"
+  if (( ENCRYPT )); then
+    say "LUKS2 en $ROOT_PART"
+    # La contraseña entra por stdin sin salto de línea: exactamente lo que
+    # teclearás al arrancar.
+    printf '%s' "$LUKS_PASS" | cryptsetup luksFormat --type luks2 --batch-mode "$ROOT_PART" -
+    printf '%s' "$LUKS_PASS" | cryptsetup open "$ROOT_PART" cryptroot -
+    ROOT_DEV=/dev/mapper/cryptroot
+  fi
+
+  say "/ → $FS"
+  if [[ "$FS" == btrfs ]]; then
+    mkfs.btrfs -f -L NANUK_ROOT "$ROOT_DEV" >/dev/null
+    mount "$ROOT_DEV" "$MNT"
+    btrfs subvolume create "$MNT/@" >/dev/null
+    [[ -z "$HOME_PART" ]] && btrfs subvolume create "$MNT/@home" >/dev/null
+    umount "$MNT"
+    mount -o subvol=@,compress=zstd,noatime "$ROOT_DEV" "$MNT"
+    if [[ -z "$HOME_PART" ]]; then
+      mkdir -p "$MNT/home"; mount -o subvol=@home,compress=zstd,noatime "$ROOT_DEV" "$MNT/home"
+    fi
+  else
+    mkfs.ext4 -qF -L NANUK_ROOT "$ROOT_DEV"
+    mount "$ROOT_DEV" "$MNT"
+  fi
+
+  # Limine + UKI: la partición EFI se monta en /boot (kernel e initramfs van
+  # dentro de la imagen .efi, en /boot/EFI/Linux/).
+  mkdir -p "$MNT/boot"; mount -o umask=0077 "$EFI_PART" "$MNT/boot"
+
+  if [[ -n "$HOME_PART" ]]; then
+    HOME_DEV="$HOME_PART"
+    if (( HOME_LUKS )); then
+      printf '%s' "$HOME_PASS" | cryptsetup open "$HOME_PART" crypthome -
+      HOME_DEV=/dev/mapper/crypthome
+    elif (( HOME_FORMAT )); then
+      say "/home → $FS"
+      if [[ "$FS" == btrfs ]]; then mkfs.btrfs -f -L NANUK_HOME "$HOME_DEV" >/dev/null
+      else mkfs.ext4 -qF -L NANUK_HOME "$HOME_DEV"; fi
+    fi
+    mkdir -p "$MNT/home"; mount "$HOME_DEV" "$MNT/home"
+  fi
+
+  if [[ -n "$SWAP_PART" ]]; then mkswap -L NANUK_SWAP "$SWAP_PART" >/dev/null; swapon "$SWAP_PART"; fi
+  say "montado en $MNT"
+}
+
+# ── 5. Sistema base ─────────────────────────────────────────────────
+install_base() {
+  step "Sistema base (pacstrap)"
+  say "eligiendo mirrors rápidos (reflector, ~1 min)"
+  timeout 180 reflector --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist \
+    || warn "reflector falló; se usa la lista que trae la ISO"
+
+  local ucode=""
+  case "$(grep -m1 '^vendor_id' /proc/cpuinfo)" in
+    *GenuineIntel*)  ucode=intel-ucode ;;
+    *AuthenticAMD*)  ucode=amd-ucode ;;
+  esac
+  # Solo lo necesario para arrancar y tener red: el resto lo instala
+  # install/03-packages.sh de Nanuk desde sus listas.
+  # binutils: mkinitcpio construye la UKI con objcopy y `base` no lo trae.
+  local pkgs=(base linux linux-firmware mkinitcpio binutils limine efibootmgr sudo networkmanager git curl nano e2fsprogs dosfstools)
+  [[ -n "$ucode" ]] && pkgs+=("$ucode")
+  [[ "$FS" == btrfs ]] && pkgs+=(btrfs-progs)
+  (( ENCRYPT || HOME_LUKS )) && pkgs+=(cryptsetup)
+  pacstrap -K "$MNT" "${pkgs[@]}"
+  genfstab -U "$MNT" >> "$MNT/etc/fstab"
+  say "base instalada, fstab por UUID"
+}
+
+configure_system() {
+  step "Configurando el sistema"
+  local root_uuid efi_disk efi_num
+  root_uuid="$(blkid -s UUID -o value "$ROOT_PART")"
+  # Línea del kernel: va DENTRO de la UKI (mkinitcpio la lee de /etc/kernel/cmdline).
+  local cmdline
+  if (( ENCRYPT )); then
+    cmdline="rd.luks.name=$root_uuid=cryptroot root=/dev/mapper/cryptroot rw"
+  else
+    cmdline="root=UUID=$root_uuid rw"
+  fi
+  [[ "$FS" == btrfs ]] && cmdline+=" rootflags=subvol=@"
+  # Plymouth (lo instala 05-desktop.sh) pediría la contraseña LUKS en texto si
+  # el stub de la UKI añade una consola serie (VMs con OVMF). Ver 05-desktop.sh.
+  cmdline+=" plymouth.ignore-serial-consoles"
+
+  local hooks="base systemd autodetect microcode modconf kms keyboard sd-vconsole block"
+  (( ENCRYPT )) && hooks+=" sd-encrypt"
+  hooks+=" filesystems fsck"
+
+  efi_disk="/dev/$(lsblk -no PKNAME "$EFI_PART" | head -1)"
+  efi_num="$(cat "/sys/class/block/$(basename "$EFI_PART")/partition")"
+
+  # Todo lo que el chroot necesita saber, en un archivo que se borra al final.
+  {
+    declare -p KEYMAP LOCALE TIMEZONE HOSTNAME_ USERNAME PASSWORD cmdline hooks efi_disk efi_num HOME_LUKS
+    [[ -n "$HOME_PART" ]] && (( HOME_LUKS )) && echo "HOME_UUID='$(blkid -s UUID -o value "$HOME_PART")'"
+  } > "$MNT/root/nanuk.env"
+  chmod 600 "$MNT/root/nanuk.env"
+
+  cat > "$MNT/root/nanuk-configure.sh" <<'CHROOT'
+#!/usr/bin/env bash
+# Generado por nanuk-install; corre dentro del chroot. Se borra al terminar.
+set -euo pipefail
+source /root/nanuk.env
+
+# Hora, idioma, teclado, nombre
+ln -sf "/usr/share/zoneinfo/$TIMEZONE" /etc/localtime
+hwclock --systohc || true
+sed -i "s|^#$LOCALE|$LOCALE|; s|^#en_US.UTF-8|en_US.UTF-8|" /etc/locale.gen
+locale-gen >/dev/null
+echo "LANG=$LOCALE" > /etc/locale.conf
+echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+echo "$HOSTNAME_" > /etc/hostname
+printf '127.0.0.1 localhost\n::1       localhost\n127.0.1.1 %s\n' "$HOSTNAME_" > /etc/hosts
+
+# Usuario con sudo (por grupo wheel) y root con la misma contraseña
+useradd -m -G wheel -s /bin/bash "$USERNAME"
+printf '%s:%s\n' "$USERNAME" "$PASSWORD" | chpasswd
+printf 'root:%s\n' "$PASSWORD" | chpasswd
+echo '%wheel ALL=(ALL:ALL) ALL' > /etc/sudoers.d/wheel; chmod 440 /etc/sudoers.d/wheel
+
+systemctl enable NetworkManager systemd-timesyncd >/dev/null
+
+# Limine primero: el binario EFI en la ruta "removable" (arranca en cualquier
+# firmware, VMs incluidas) + entrada NVRAM por si acaso. limine.conf apunta a
+# las UKI: no hay que tocarlo al actualizar el kernel.
+mkdir -p /boot/EFI/Linux /boot/EFI/BOOT
+cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI
+cat > /boot/limine.conf <<'EOL'
+timeout: 3
+interface_branding: Nanuk
+interface_branding_color: 6
+hash_mismatch_panic: no
+
+/Nanuk
+    protocol: efi
+    path: boot():/EFI/Linux/nanuk-linux.efi
+
+/Nanuk (initramfs de emergencia)
+    protocol: efi
+    path: boot():/EFI/Linux/nanuk-linux-fallback.efi
+EOL
+mkdir -p /etc/pacman.d/hooks
+cat > /etc/pacman.d/hooks/99-nanuk-limine.hook <<'EOH'
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = limine
+
+[Action]
+Description = Nanuk: copiando el nuevo Limine a la partición EFI...
+When = PostTransaction
+Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI
+EOH
+efibootmgr --create --disk "$efi_disk" --part "$efi_num" --label "Nanuk" \
+  --loader '\EFI\BOOT\BOOTX64.EFI' >/dev/null 2>&1 || echo "  (sin entrada NVRAM; el firmware usará EFI/BOOT/BOOTX64.EFI igualmente)"
+
+# initramfs con systemd + UKI (kernel + initramfs + cmdline en un solo .efi).
+# El hook plymouth lo añade después 05-desktop.sh. Necesita objcopy (binutils).
+sed -i "s|^HOOKS=.*|HOOKS=($hooks)|" /etc/mkinitcpio.conf
+echo "$cmdline" > /etc/kernel/cmdline
+cat > /etc/mkinitcpio.d/linux.preset <<'EOP'
+# mkinitcpio preset: kernel + initramfs + cmdline en una sola imagen UEFI (UKI).
+# Se regenera sola con cada actualización del kernel (hook de pacman).
+ALL_kver="/boot/vmlinuz-linux"
+PRESETS=('default' 'fallback')
+default_uki="/boot/EFI/Linux/nanuk-linux.efi"
+fallback_uki="/boot/EFI/Linux/nanuk-linux-fallback.efi"
+fallback_options="-S autodetect"
+EOP
+mkinitcpio -P
+
+# /home cifrado existente: que systemd lo abra al arrancar.
+if [[ "${HOME_LUKS:-0}" == 1 && -n "${HOME_UUID:-}" ]]; then
+  echo "crypthome UUID=$HOME_UUID none luks" >> /etc/crypttab
+fi
+CHROOT
+  arch-chroot "$MNT" bash /root/nanuk-configure.sh
+  rm -f "$MNT/root/nanuk-configure.sh"
+
+  # Comprobar que lo que arranca existe de verdad antes de seguir.
+  local f
+  for f in EFI/BOOT/BOOTX64.EFI EFI/Linux/nanuk-linux.efi limine.conf; do
+    [[ -s "$MNT/boot/$f" ]] || die "falta /boot/$f en el sistema instalado: el arranque no está completo (mira $LOG)"
+  done
+  say "arranque: Limine → UKI en /boot/EFI/Linux/ ✔"
+}
+
+# ── 6. Nanuk propiamente dicho ──────────────────────────────────────
+install_nanuk() {
+  step "Instalando Nanuk (install/install.sh, pasos 01-07)"
+  local home="$MNT/home/$USERNAME" dest="/home/$USERNAME/.local/share/nanuk"
+  mkdir -p "$home/.local/share"
+  cp -a "$NANUK_SRC" "$MNT$dest"
+  arch-chroot "$MNT" chown -R "$USERNAME:$USERNAME" "/home/$USERNAME"
+  # sudo sin contraseña SOLO durante la instalación (se quita al final).
+  # sudo lee /etc/sudoers.d/ en orden alfabético y gana la ÚLTIMA regla que
+  # coincide: el nombre empieza por "zz" para ir después de "wheel".
+  echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" > "$MNT/etc/sudoers.d/zz-nanuk-install"
+  chmod 440 "$MNT/etc/sudoers.d/zz-nanuk-install"
+
+  INSTALL_OK=0
+  if arch-chroot "$MNT" runuser -l "$USERNAME" -c "bash $dest/install/install.sh"; then
+    INSTALL_OK=1
+  else
+    warn "install.sh terminó con errores. El sistema base arranca igual; dentro, repite:"
+    warn "  bash ~/.local/share/nanuk/install/install.sh"
+  fi
+  rm -f "$MNT/etc/sudoers.d/zz-nanuk-install"
+}
+
+finish() {
+  step "Terminando"
+  rm -f "$MNT/root/nanuk.env" "$MNT/etc/sudoers.d/zz-nanuk-install"
+  mkdir -p "$MNT/var/log"; cp "$LOG" "$MNT/var/log/nanuk-install.log" 2>/dev/null || true
+  sync
+  umount -R "$MNT" || warn "no se pudo desmontar todo (no pasa nada al reiniciar)"
+  [[ -n "$SWAP_PART" ]] && swapoff "$SWAP_PART" 2>/dev/null || true
+  cryptsetup close crypthome 2>/dev/null || true
+  cryptsetup close cryptroot 2>/dev/null || true
+  echo
+  if (( INSTALL_OK )); then
+    gum style --foreground "$ICE" --bold "✔ Nanuk instalado."
+    echo "  Saca la USB y reinicia: splash del oso → autologin → Hyprland."
+  else
+    gum style --foreground "$ICE" --bold "Sistema base instalado; Nanuk quedó a medias."
+    echo "  Reinicia, entra como $USERNAME y ejecuta: bash ~/.local/share/nanuk/install/install.sh"
+  fi
+  echo "  Log: /var/log/nanuk-install.log"
+  echo
+  # La salida está redirigida al log desde prepare_disks: gum vuelve a la tty.
+  if gum confirm "¿Reiniciar ahora?" </dev/tty >/dev/tty 2>&1; then reboot; fi
+}
+
+# ── main ────────────────────────────────────────────────────────────
+banner
+preflight
+questions
+storage
+summary
+# A partir de aquí todo queda en el log (las preguntas ya terminaron).
+exec > >(tee -a "$LOG") 2>&1
+trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
+prepare_disks
+install_base
+configure_system
+install_nanuk
+finish

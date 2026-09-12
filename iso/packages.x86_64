@@ -1,0 +1,52 @@
+# Paquetes del entorno vivo de la ISO de Nanuk (no del sistema instalado:
+# eso lo deciden install/ y packages/ del repo, que viajan dentro de la ISO).
+# Base mínima de releng + lo que necesita nanuk-install.
+
+# Sistema vivo
+base
+linux
+linux-firmware
+mkinitcpio
+mkinitcpio-archiso
+amd-ucode
+intel-ucode
+sof-firmware
+terminus-font
+
+# Instalar: particionar, formatear, cifrar, pacstrap
+arch-install-scripts
+archinstall
+cryptsetup
+dosfstools
+e2fsprogs
+btrfs-progs
+gptfdisk
+parted
+efibootmgr
+util-linux
+
+# Red (systemd-networkd + iwd para Wi-Fi, como en la ISO oficial)
+iwd
+wireless-regdb
+systemd-resolvconf
+reflector
+
+# El instalador (gum) y utilidades de diario
+gum
+git
+curl
+rsync
+less
+nano
+vim
+tmux
+pv
+man-db
+usbutils
+nvme-cli
+smartmontools
+kitty-terminfo
+
+# Diagnóstico si algo no arranca
+memtest86+-efi
+edk2-shell

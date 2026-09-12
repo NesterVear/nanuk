@@ -20,6 +20,9 @@ n.bind("SUPER + comma", "Cerrar última notificación", "makoctl dismiss")
 n.bind("SUPER + SHIFT + comma", "Cerrar todas las notificaciones", "makoctl dismiss --all")
 n.bind("SUPER + CTRL + comma", "Silenciar / reactivar notificaciones", "makoctl mode -t silent")
 
+-- Fondo de pantalla: rota entre los del tema y los tuyos (nanuk bg).
+n.bind("SUPER + SHIFT + B", "Siguiente fondo de pantalla", "nanuk-bg next")
+
 -- Barra: SIGUSR1 muestra/oculta waybar.
 n.bind("SUPER + SHIFT + SPACE", "Mostrar/ocultar barra", "pkill -SIGUSR1 waybar")
 

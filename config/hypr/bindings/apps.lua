@@ -10,9 +10,9 @@ n.bind("SUPER + SPACE", "Launcher", apps.launcher)
 n.bind("SUPER + B", "Navegador", n.launch(apps.browser))
 n.bind("SUPER + E", "Archivos", n.launch(apps.files))
 n.bind("SUPER + N", "Editor", n.launch(apps.editor))
-n.bind("SUPER + SHIFT + T", "Monitor del sistema (btop)", n.launch(apps.terminal .. " btop"))
+n.bind("SUPER + SHIFT + T", "Monitor del sistema (btop)", n.launch(apps.tui .. " btop"))
 n.bind("SUPER + SHIFT + D", "Docker (lazydocker)", n.launch(apps.terminal .. " lazydocker"))
-n.bind("SUPER + SHIFT + I", "Instalar apps y apps web (nanuk menu)", n.launch(apps.terminal .. " nanuk menu"))
+n.bind("SUPER + SHIFT + I", "Instalar apps y apps web (nanuk menu)", n.launch(apps.tui .. " nanuk menu"))
 
 -- Apps web (ventana propia en Brave, ver bin/nanuk-webapp). Con --focus, si
 -- ya está abierta la enfoca. Las tuyas: user/webapps/*.desktop + user/hypr/bindings.lua

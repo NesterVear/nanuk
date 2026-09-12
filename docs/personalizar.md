@@ -157,6 +157,77 @@ suyos: `colors/nanuk.lua` y `lua/plugins/nanuk.lua`. Todo lo demás no se toca.
 `~/.config/btop/btop.conf` se copia una sola vez y después es tuyo (btop lo
 reescribe al salir). Solo el tema `nanuk.theme` se enlaza desde los defaults.
 
+### Ventanas: qué flota, con qué tamaño
+
+Las reglas de `default/hypr/windows.lua` hacen que casi nada haya que
+recolocarlo a mano:
+
+| Tipo | Ejemplos | Cómo abre |
+|------|----------|-----------|
+| Diálogo | "¿Seguro?", Propiedades, polkit, calculadora | flotando, centrado, con su tamaño natural |
+| Mediana (60% x 65%) | btop, `nanuk menu`, nmtui, pavucontrol, KeePassXC, file-roller | flotando, centrada |
+| Grande (72% x 80%) | elegir o guardar archivos en cualquier app | flotando, centrada |
+| Navegador | Brave, Chromium y sus apps web | siempre en mosaico |
+| Resto | editores, terminal, Nautilus, VLC | en mosaico |
+
+Los modales se reconocen por el protocolo, no por el título, así que funciona
+en cualquier idioma. Para meter una app tuya en una talla, en
+`user/hypr/windows.lua`:
+
+```lua
+n.window("^(org.keepassxc.KeePassXC)$", { tag = "+float-md" })   -- mediana
+n.window("^(mi-app)$", { tag = "+float-lg" })                    -- grande
+n.window("^(gimp)$", { tag = "-dialog" })                        -- que no flote
+```
+
+La clase de una ventana: `hyprctl clients`. `SUPER + T` pasa la ventana
+activa a flotante mediana y centrada, o la devuelve al mosaico.
+
+### Inicio de sesión y keyring
+
+Nanuk entra por autologin y **bloquea al momento con hyprlock**: ves el
+wordmark y el campo de contraseña como si fuera una pantalla de inicio de
+sesión, sin display manager. Esa misma contraseña abre el keyring de GNOME
+(Brave, VS Code…), así no vuelve a preguntar. Para entrar directo:
+`n.lock_on_start = false` en `~/.config/nanuk/user/hypr/autostart.lua`.
+
+### Entradas que no quieres ver en el launcher
+
+`~/.config/nanuk/user/hidden-apps.txt`: un id de `.desktop` por línea (el nombre
+del archivo en `/usr/share/applications/` sin la extensión). Nanuk ya oculta
+las de avahi ("Examinador de servidores SSH/VNC") y algunas herramientas de
+dependencias (`default/hidden-apps.txt`). Aplica con el paso 06.
+
+### Apps GTK y Qt (Nautilus, diálogos, VLC, KeePassXC…)
+
+Negro absoluto y blanco, iconos **Tela-circle-grey-dark** (estilo Material,
+carpetas grises), cursor Adwaita, radio 0. Tres piezas, todas en `default/`:
+`gtk-3.0/` y `gtk-4.0/` (settings.ini + gtk.css) y el bloque `gsettings` del
+paso 05, que es lo que las apps de libadwaita leen de verdad en Wayland.
+Qt usa `QT_QPA_PLATFORMTHEME=gtk3` y sigue a GTK. Para cambiar de iconos:
+`gsettings set org.gnome.desktop.interface icon-theme "<nombre>"` y la línea
+`gtk-icon-theme-name` en tu copia de `user/gtk-3.0/settings.ini`.
+
+### Fondo de pantalla
+
+Nanuk trae siete fondos en el tema (`~/.config/nanuk/theme/backgrounds/1.jpg` … `7.jpg`)
+y arranca con el `1`. Para elegir otro, o ninguno:
+
+```bash
+nanuk bg              # lista (● = activo)
+nanuk bg 3            # activa 3.jpg del tema
+nanuk bg none         # negro puro, sin imagen (hyprpaper ni se arranca)
+nanuk bg next         # el siguiente de la lista; también SUPER + SHIFT + B
+```
+
+Tus propias imágenes van en `~/.config/nanuk/user/backgrounds/` (jpg, png o
+webp, mejor sin espacios en el nombre) y aparecen en la lista con su nombre:
+`nanuk bg mi-foto`. También desde `nanuk menu` → "Cambiar el fondo de pantalla".
+
+Lo elegido se guarda como enlace en `~/.config/nanuk/user/background`, así que
+sobrevive a los updates. `~/.config/hypr/hyprpaper.conf` lo genera `nanuk-bg`
+a partir de ese enlace: no lo edites a mano.
+
 ### Tema
 
 `nanuk theme` lista los temas; `nanuk theme <nombre>` cambia. Cada tema vive en
@@ -176,6 +247,8 @@ reescribe al salir). Solo el tema `nanuk.theme` se enlaza desde los defaults.
 | `~/.config/nanuk/themes/`             | Sí, se reemplaza entera                       |
 | `~/.config/nanuk/user/`               | **No.** Solo se añaden plantillas nuevas si no existen |
 | `~/.config/nanuk/theme` (enlace)      | No, respeta el tema que elegiste              |
+| `~/.config/nanuk/user/background`     | No, respeta el fondo que elegiste (se crea si falta) |
+| `~/.config/hypr/hyprpaper.conf`       | Lo regenera `nanuk-bg` a partir del enlace anterior |
 | `~/.config/hypr/hyprland.lua`         | Sí (es nuestro; si había otro, se respalda `.bak.*`) |
 | `~/.config/{waybar,kitty,…}` (enlaces) | Se rehacen apuntando a `user/` o `default/`   |
 | `~/.config/nvim/`                     | Solo `colors/nanuk.lua` y `lua/plugins/nanuk.lua` |

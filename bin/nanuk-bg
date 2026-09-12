@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# nanuk-bg — fondo de pantalla.
+#
+# Los fondos viven en dos sitios:
+#   ~/.config/nanuk/theme/backgrounds/   ← los del tema (se reemplazan al actualizar)
+#   ~/.config/nanuk/user/backgrounds/    ← los tuyos (nunca se tocan)
+# Tu elección es un enlace: ~/.config/nanuk/user/background → la imagen.
+# Si el enlace apunta a la palabra `none`, no hay imagen: Hyprland pinta el
+# negro puro de siempre (misc.background_color) y hyprpaper ni se arranca.
+#
+#   nanuk-bg               lista los fondos (● = activo)
+#   nanuk-bg <nombre|ruta> activa uno: 3, 3.jpg, mi-foto o /ruta/a/imagen.png
+#   nanuk-bg next          el siguiente de la lista (SUPER + SHIFT + B)
+#   nanuk-bg none          negro puro, sin imagen
+#   nanuk-bg apply         arranca/recarga hyprpaper con el fondo elegido (autostart)
+#   nanuk-bg path          imprime la ruta del fondo activo (nada si es none)
+#   nanuk-bg names         solo los nombres, para menús (gum)
+#
+# hyprpaper lee ~/.config/hypr/hyprpaper.conf: ese archivo lo GENERA este
+# script a partir del enlace. No se edita a mano.
+# ─────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+CFG="$HOME/.config/nanuk"
+LINK="$CFG/user/background"
+CONF="$HOME/.config/hypr/hyprpaper.conf"
+
+if [[ -t 1 ]]; then B=$'\e[1m'; C=$'\e[36m'; R=$'\e[31m'; X=$'\e[0m'; else B=; C=; R=; X=; fi
+say() { echo "${C}▶${X} $*"; }
+die() { echo "${R}✖${X} $*" >&2; exit 1; }
+
+# Lista ordenada de fondos: primero los del tema, después los tuyos.
+# sort -V ordena 1, 2, ... 10 como números y no como texto.
+backgrounds() {
+  local d
+  for d in "$CFG/theme/backgrounds" "$CFG/user/backgrounds"; do
+    [[ -d "$d" ]] || continue
+    find "$d" -maxdepth 1 -type f \
+      \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) \
+      | sort -V
+  done
+}
+
+# Ruta del fondo activo; "none" si es negro puro; vacío si no hay enlace.
+current() {
+  [[ -L "$LINK" ]] || { echo ""; return; }
+  local target; target="$(readlink "$LINK")"
+  [[ "$target" == none ]] && { echo none; return; }
+  echo "$target"
+}
+
+# Dos rutas apuntan al mismo archivo (siguiendo enlaces como theme →).
+same_file() { [[ "$(readlink -f "$1" 2>/dev/null)" == "$(readlink -f "$2" 2>/dev/null)" ]]; }
+
+# Busca un fondo por nombre (con o sin extensión) en user/ y luego en el tema.
+resolve() {
+  local name="$1" d ext
+  [[ -f "$name" ]] && { readlink -f "$name"; return; }
+  for d in "$CFG/user/backgrounds" "$CFG/theme/backgrounds"; do
+    [[ -f "$d/$name" ]] && { echo "$d/$name"; return; }
+    for ext in jpg jpeg png webp; do
+      [[ -f "$d/$name.$ext" ]] && { echo "$d/$name.$ext"; return; }
+    done
+  done
+  return 1
+}
+
+start_hyprpaper() {
+  # uwsm-app lo mete como unidad de usuario (igual que waybar o mako);
+  # setsid -f lo desengancha de esta terminal para que no muera con ella.
+  if command -v uwsm-app &>/dev/null; then
+    setsid -f uwsm-app -- hyprpaper >/dev/null 2>&1
+  else
+    setsid -f hyprpaper >/dev/null 2>&1
+  fi
+}
+
+cmd_apply() {
+  local bg; bg="$(current)"
+  if [[ -z "$bg" || "$bg" == none || ! -f "$bg" ]]; then
+    # Sin imagen: hyprpaper fuera y Hyprland pinta negro. Si el enlace
+    # apunta a una imagen que ya no existe (tema cambiado), también.
+    pkill -x hyprpaper 2>/dev/null || true
+    return 0
+  fi
+  command -v hyprpaper &>/dev/null || die "falta hyprpaper: sudo pacman -S hyprpaper"
+  mkdir -p "$(dirname "$CONF")"
+  cat > "$CONF" <<EOT
+# Generado por nanuk-bg. No editar: cambia el fondo con \`nanuk bg\`.
+splash = false
+ipc = on
+preload = $bg
+wallpaper = , $bg
+EOT
+  if pgrep -x hyprpaper >/dev/null; then
+    # `reload` (hyprpaper ≥ 0.7) cambia la imagen en caliente en todos los
+    # monitores. Si esa orden no existiera, se reinicia y listo.
+    hyprctl hyprpaper reload ",$bg" >/dev/null 2>&1 \
+      || { pkill -x hyprpaper; sleep 0.2; start_hyprpaper; }
+  else
+    start_hyprpaper
+  fi
+}
+
+cmd_set() {
+  local target="$1" path
+  mkdir -p "$(dirname "$LINK")"
+  if [[ "$target" == none ]]; then
+    ln -sfn none "$LINK"
+    say "fondo: negro puro (sin imagen)"
+  else
+    path="$(resolve "$target")" || die "no encuentro el fondo '$target' (mira: nanuk bg)"
+    ln -sfn "$path" "$LINK"
+    say "fondo: $(basename "$path")"
+  fi
+  cmd_apply
+}
+
+cmd_next() {
+  local -a list; mapfile -t list < <(backgrounds)
+  (( ${#list[@]} )) || die "no hay fondos en el tema ni en user/backgrounds/"
+  local cur idx=-1 i; cur="$(current)"
+  for i in "${!list[@]}"; do
+    [[ -n "$cur" && "$cur" != none ]] && same_file "${list[$i]}" "$cur" && idx=$i
+  done
+  local next="${list[$(( (idx + 1) % ${#list[@]} ))]}"
+  cmd_set "$next"
+  command -v notify-send &>/dev/null && notify-send -t 1500 "Fondo" "$(basename "$next")" || true
+}
+
+cmd_list() {
+  local cur f mark layer; cur="$(current)"
+  echo "${B}Fondos de pantalla${X} (● activo):"
+  while IFS= read -r f; do
+    mark=" "; [[ -n "$cur" && "$cur" != none ]] && same_file "$f" "$cur" && mark="●"
+    layer="tema"; [[ "$f" == "$CFG/user/"* ]] && layer="user/backgrounds"
+    printf '  %s %-24s %s\n' "$mark" "$(basename "$f")" "$layer"
+  done < <(backgrounds)
+  mark=" "; [[ "$cur" == none ]] && mark="●"
+  printf '  %s %-24s %s\n' "$mark" "none" "negro puro, sin imagen"
+}
+
+cmd_names() {
+  local f
+  while IFS= read -r f; do
+    [[ "$f" == "$CFG/user/"* ]] && echo "$(basename "$f")  (tuyo)" || echo "$(basename "$f")  (tema)"
+  done < <(backgrounds)
+}
+
+case "${1:-list}" in
+  list)   cmd_list ;;
+  names)  cmd_names ;;
+  next)   cmd_next ;;
+  apply)  cmd_apply ;;
+  path)   bg="$(current)"; [[ "$bg" != none ]] && echo "$bg" || true ;;
+  help|-h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *)      cmd_set "$1" ;;
+esac

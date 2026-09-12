@@ -1,0 +1,8 @@
+
+  NANUK  —  instalador
+
+  El instalador arranca solo en esta consola. Si lo cerraste: nanuk-install
+  Wi-Fi:   iwctl station wlan0 connect "<red>"    (Ethernet conecta sola)
+  Plan B:  archinstall  y luego, en el sistema instalado,
+           curl -fsSL https://raw.githubusercontent.com/nestervear/nanuk/main/boot.sh | bash
+

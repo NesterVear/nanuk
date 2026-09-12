@@ -49,6 +49,16 @@ if [[ ! -e "$NANUK_CFG/theme" ]]; then
   echo "✔ tema activo: nanuk"
 fi
 
+# ── 3b. Fondo de pantalla ──────────────────────────────────────────
+# user/background es un enlace a la imagen elegida (lo maneja `nanuk bg`).
+# Solo se crea si falta, apuntando al primer fondo del tema activo.
+# user/backgrounds/ es donde van tus propias imágenes.
+mkdir -p "$NANUK_CFG/user/backgrounds"
+if [[ ! -L "$NANUK_CFG/user/background" ]]; then
+  ln -s "$NANUK_CFG/theme/backgrounds/1.jpg" "$NANUK_CFG/user/background"
+  echo "✔ fondo de pantalla: 1.jpg del tema (cámbialo con: nanuk bg)"
+fi
+
 # ── 4. Enlaces por app (precedencia user > default) ────────────────
 # link_layered <destino> <ruta-relativa>
 #   Enlaza <destino> a user/<ruta> si existe, si no a default/<ruta>.
@@ -128,6 +138,19 @@ for layer in default user; do
 done
 command -v update-desktop-database &>/dev/null && update-desktop-database "$APPS_DIR" 2>/dev/null || true
 echo "✔ apps web enlazadas en $APPS_DIR"
+
+# ── 6c. Ocultar del launcher entradas que no son apps (hidden-apps.txt) ──
+# Un .desktop local con el mismo nombre que uno del sistema lo sustituye;
+# con NoDisplay=true, wofi y el resto de launchers dejan de listarlo.
+for list in "$NANUK_CFG/default/hidden-apps.txt" "$NANUK_CFG/user/hidden-apps.txt"; do
+  [[ -f "$list" ]] || continue
+  while IFS= read -r id; do
+    id="${id%%#*}"; id="${id// /}"; [[ -n "$id" ]] || continue
+    [[ -f "/usr/share/applications/$id.desktop" ]] || continue
+    printf '[Desktop Entry]\nType=Application\nName=%s\nNoDisplay=true\n' "$id" > "$APPS_DIR/$id.desktop"
+  done < "$list"
+done
+echo "✔ entradas ocultas del launcher según hidden-apps.txt"
 
 # ── 7. Bash: bloque con marcadores en ~/.bashrc ────────────────────
 BASHRC="$HOME/.bashrc"

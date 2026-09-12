@@ -14,6 +14,9 @@ mako
 hyprlock
 hypridle
 
+# Fondo de pantalla (nanuk bg); sin imagen, Hyprland pinta negro puro
+hyprpaper
+
 # Terminal
 kitty
 
@@ -56,12 +59,14 @@ udiskie
 evince
 imv
 mpv
+vlc
 
 # Toolkits y temas (Wayland para Qt, tema oscuro GTK)
 qt5-wayland
 qt6-wayland
-adwaita-icon-theme
+adwaita-icon-theme               # trae adwaita-cursors; base de la que hereda Tela
 gnome-themes-extra
+tela-circle-icon-theme-grey      # iconos estilo Material, carpetas grises: Tela-circle-grey-dark
 
 # Fuentes
 ttf-cascadia-mono-nerd

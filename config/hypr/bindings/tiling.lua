@@ -5,7 +5,24 @@ local dsp = hl.dsp
 
 -- ── Ventana activa ──────────────────────────────────────────────────
 n.bind("SUPER + W", "Cerrar ventana", dsp.window.close())
-n.bind("SUPER + T", "Flotante / en mosaico", dsp.window.float({ action = "toggle" }))
+-- SUPER+T estilo Windows: una ventana en mosaico pasa a flotante MEDIANA
+-- (60% x 65% del monitor) y centrada, en vez de quedarse con el tamaño raro
+-- que tuviera; una flotante vuelve al mosaico. Mismas medidas que la talla
+-- "float-md" de windows.lua.
+n.bind("SUPER + T", "Flotante mediana y centrada / en mosaico", function()
+  local win = hl.get_active_window()
+  if not win then return end
+  local was_floating = win.floating
+  hl.dispatch(dsp.window.float({ action = "toggle" }))
+  if was_floating then return end
+  local mon = win.monitor
+  if mon then
+    local scale = (mon.scale and mon.scale > 0) and mon.scale or 1
+    -- resize({ x, y }) sin relative = tamaño exacto, en píxeles lógicos.
+    hl.dispatch(dsp.window.resize({ x = math.floor(mon.width / scale * 0.6), y = math.floor(mon.height / scale * 0.65) }))
+  end
+  hl.dispatch(dsp.window.center())
+end)
 n.bind("SUPER + F", "Pantalla completa", dsp.window.fullscreen({ mode = "fullscreen" }))
 n.bind("SUPER + ALT + F", "Maximizar (sin tapar la barra)", dsp.window.fullscreen({ mode = "maximized" }))
 n.bind("SUPER + P", "Pseudo-mosaico (tamaño fijo)", dsp.window.pseudo())

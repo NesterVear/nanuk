@@ -1,0 +1,5 @@
+# Salidas de la construcción de la ISO
+iso/out/
+iso/work/
+# Copia del repo que build.sh mete en la ISO (se regenera en cada build)
+iso/airootfs/usr/local/share/nanuk/

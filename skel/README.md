@@ -11,6 +11,8 @@ vuelve a tocar**. Todo lo que quieras cambiar del sistema va aquí, nunca en
 - Apps web para el launcher (Brave, ventana propia) → `webapps/*.desktop`
   (las crea `nanuk webapp add "Nombre" https://url`, o `nanuk menu`)
 - Paquetes tuyos → `packages.txt` (lo llena `nanuk install`)
+- Fondos de pantalla tuyos → `backgrounds/*.jpg|png`; el elegido es el enlace
+  `background` (lo cambia `nanuk bg <nombre>`, `nanuk bg none` = negro puro)
 
 Guía completa: `docs/personalizar.md` en el repo
 (`~/.local/share/nanuk/docs/personalizar.md`).

@@ -33,6 +33,15 @@ fi
 rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$HERE/wordmark.png"
 rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$PLY/logo.png"
 
+# Fondo del lock (lock.png): pantalla 16:9 negra con el wordmark centrado al
+# 58% del ancho. hyprlock escala el fondo en modo "cover" (llena y recorta
+# centrado), así que funciona en cualquier resolución y proporción: en 16:10
+# o 4:3 solo se recortan bordes negros. NO usar el widget `image` de hyprlock
+# para el wordmark: escala por el lado MENOR y recorta en cuadrado (pensado
+# para avatares) y un logo ancho sale como una letra gigante.
+magick -size 3840x2160 xc:black \( "$HERE/wordmark.png" -resize 2227x \) \
+  -gravity center -composite -depth 8 -strip -define png:compression-level=9 "$HERE/lock.png"
+
 # ── Assets del splash (Plymouth) ────────────────────────────────────
 # Caja del campo de contraseña: solo un borde fino de hielo, sin relleno.
 magick -size 420x52 xc:none \

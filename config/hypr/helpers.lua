@@ -17,7 +17,20 @@ n.apps = {
   files = "nautilus --new-window",
   editor = "kitty nvim",
   power_menu = "nanuk-power-menu",
+  -- Programas de terminal que se abren como ventana flotante mediana (btop,
+  -- nanuk menu, nmtui…). La clase nanuk.tui la reconoce windows.lua. Si
+  -- cambias de terminal: foot usa "foot --app-id=nanuk.tui", ghostty
+  -- "ghostty --class=nanuk.tui -e".
+  tui = "kitty --class nanuk.tui",
 }
+
+-- ── Opciones de sesión ──────────────────────────────────────────────
+-- Nanuk entra por autologin y bloquea al momento con hyprlock: ves el
+-- wordmark y el campo de contraseña, como una pantalla de inicio de sesión,
+-- pero sin display manager. Esa contraseña también abre el keyring (PAM).
+-- Para entrar directo sin contraseña: en user/hypr/autostart.lua,
+--   n.lock_on_start = false
+n.lock_on_start = true
 
 -- ── Utilidades ──────────────────────────────────────────────────────
 

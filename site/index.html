@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nanuk</title>
+<meta name="description" content="Nanuk: Arch Linux + Hyprland, negro absoluto, un solo acento de hielo. Las actualizaciones jamás tocan tu configuración.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23000'/%3E%3Crect x='4' y='22' width='24' height='2' fill='%239fd8ff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Cascadia+Mono:wght@400;600&display=swap">
+<style>
+  /* Nanuk — una sola paleta, la del sistema: negro, blanco, gris, hielo.
+     Radio 0 y bordes de 1 px como la densidad estricta del escritorio. */
+  :root {
+    --bg: #000000;
+    --fg: #ffffff;
+    --muted: #909090;
+    --line: #1a1a1a;
+    --surface: #070707;
+    --ice: #9fd8ff;
+    --sans: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+    --mono: "Cascadia Mono", "Cascadia Code", "JetBrains Mono", ui-monospace, monospace;
+    --measure: 66ch;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    padding-inline: clamp(16px, 5vw, 48px); padding-block: 0 64px;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+  a:hover, a:focus-visible { border-bottom-color: var(--ice); outline: none; }
+  :focus-visible { outline: 1px solid var(--ice); outline-offset: 2px; }
+  ::selection { background: var(--ice); color: var(--bg); }
+
+  /* Barra superior: 24 px, como waybar. */
+  .bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    height: 32px; border-bottom: 1px solid var(--line);
+    font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--muted);
+    position: sticky; top: 0; background: var(--bg); z-index: 2;
+  }
+  .bar nav { display: flex; gap: 20px; flex-wrap: wrap; }
+  .bar a { border: 0; color: var(--muted); }
+  .bar a:hover { color: var(--ice); }
+  .bar .name { color: var(--fg); font-weight: 600; }
+
+  main { max-width: 1040px; margin: 0 auto; }
+
+  /* Hero: el wordmark ya trae la línea de hielo y el oso. */
+  .hero { padding-block: clamp(48px, 9vw, 112px) clamp(40px, 6vw, 72px); text-align: center; }
+  .hero img { display: block; width: min(100%, 1000px); height: auto; margin-inline: auto; }
+  .hero p.lead {
+    max-width: var(--measure); margin: 36px auto 0; font-size: clamp(18px, 2.2vw, 22px);
+    line-height: 1.45; text-wrap: balance;
+  }
+  .hero p.lead b { font-weight: 600; color: var(--ice); }
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 36px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px;
+    border: 1px solid var(--line); font-family: var(--mono); font-size: 13px; letter-spacing: .02em;
+    background: var(--bg); color: var(--fg); cursor: pointer;
+  }
+  .btn:hover, .btn:focus-visible { border-color: var(--ice); }
+  .btn.primary { border-color: var(--ice); background: var(--ice); color: var(--bg); font-weight: 600; }
+  .btn.primary:hover { background: #b9e3ff; }
+  .btn small { color: inherit; opacity: .7; font-size: 11px; }
+
+  /* Secciones: una etiqueta mono en gris y un título. Sin cajas. */
+  section { border-top: 1px solid var(--line); padding-block: 48px; }
+  .eyebrow {
+    font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  h2 { font-size: clamp(22px, 3vw, 28px); font-weight: 600; line-height: 1.2; margin: 0 0 20px; text-wrap: balance; letter-spacing: -.01em; }
+  h3 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+  p { max-width: var(--measure); margin: 0 0 14px; }
+  .muted { color: var(--muted); }
+
+  .grid { display: grid; gap: 32px 40px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+  .facts dt { font-family: var(--mono); font-size: 12px; color: var(--ice); letter-spacing: .04em; margin-bottom: 4px; }
+  .facts dd { margin: 0 0 20px; color: var(--muted); max-width: 40ch; }
+  .facts dd strong { color: var(--fg); font-weight: 500; }
+
+  /* Comandos: bloque negro con hairline y botón copiar. */
+  .cmd {
+    position: relative; margin: 12px 0 18px; border: 1px solid var(--line); background: var(--surface);
+    font-family: var(--mono); font-size: 13px; line-height: 1.5; overflow-x: auto;
+  }
+  .cmd pre { margin: 0; padding: 14px 110px 14px 16px; white-space: pre; }
+  .cmd .copy {
+    position: absolute; top: 8px; right: 8px; height: 26px; padding: 0 10px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--muted);
+    font: inherit; font-size: 11px; cursor: pointer;
+  }
+  .cmd .copy:hover, .cmd .copy:focus-visible { color: var(--ice); border-color: var(--ice); }
+  .cmd .copy[data-done="1"] { color: var(--ice); border-color: var(--ice); }
+  .cmd .p { color: var(--muted); user-select: none; }
+  ol.steps .cmd { margin: 10px 0 4px; }
+
+  ol.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; max-width: var(--measure); }
+  ol.steps > li { position: relative; padding: 10px 0 10px 40px; border-top: 1px solid var(--line); counter-increment: s; }
+  ol.steps > li:last-child { border-bottom: 1px solid var(--line); }
+  ol.steps > li::before {
+    content: counter(s); position: absolute; left: 0; top: 11px;
+    font-family: var(--mono); font-size: 12px; color: var(--ice);
+  }
+  ol.steps b { font-weight: 600; }
+  .path { border-top: 1px solid var(--line); padding-top: 28px; margin-top: 28px; }
+  .path:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+  .path-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+  .path-head .k { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; color: var(--ice); border: 1px solid var(--ice); padding: 2px 8px; }
+  .path-head h3 { font-size: 20px; margin: 0; }
+  h4.after { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 40px 0 8px; }
+  .path h4 { font-family: var(--mono); font-size: 12px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 24px 0 8px; }
+  .path .cmd, .path ol.steps, .path > p { max-width: var(--measure); }
+  ul.opts { list-style: none; margin: 8px 0 0; padding: 0; font-size: 14px; color: var(--muted); }
+  ul.opts li { display: grid; grid-template-columns: 96px 1fr; gap: 8px; padding: 4px 0; }
+  ul.opts li span { font-family: var(--mono); font-size: 12px; color: var(--ice); padding-top: 2px; }
+  ul.opts b { color: var(--fg); font-weight: 600; }
+  @media (max-width: 480px) { ul.opts li { grid-template-columns: 1fr; gap: 0; } }
+  code { font-family: var(--mono); font-size: .92em; color: var(--ice); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .tablewrap { overflow-x: auto; }
+  th, td { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 12px; font-weight: 400; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+
+  /* Capturas: huecos con hairline hasta que haya imágenes reales. */
+  .shots { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .shots figure { margin: 0; }
+  .shots .frame {
+    aspect-ratio: 16 / 9; max-width: 100%; border: 1px solid var(--line); background: var(--surface);
+    display: grid; place-items: center; position: relative; overflow: hidden;
+  }
+  .shots .frame::after { content: ""; position: absolute; left: 12%; right: 12%; bottom: 28%; height: 1px; background: var(--ice); opacity: .6; }
+  .shots img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .shots .pending { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .shots figcaption { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .docs { display: grid; gap: 0; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); border-top: 1px solid var(--line); }
+  .docs a {
+    display: block; padding: 18px 16px 18px 0; border: 0; border-bottom: 1px solid var(--line);
+  }
+  .docs a:hover .t { color: var(--ice); }
+  .docs .t { display: block; font-weight: 600; }
+  .docs .d { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+
+  footer {
+    border-top: 1px solid var(--line); padding-top: 20px; margin-top: 8px;
+    display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between;
+    font-family: var(--mono); font-size: 12px; color: var(--muted);
+  }
+  footer a { color: var(--muted); border: 0; }
+  footer a:hover { color: var(--ice); }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, .cmd .copy, a { transition: border-color .15s, color .15s, background .15s; }
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <span class="name">nanuk</span>
+  <nav aria-label="Secciones">
+    <a href="#iso">iso</a>
+    <a href="#curl">curl</a>
+    <a href="#capturas">capturas</a>
+    <a href="#docs">docs</a>
+    <a href="https://github.com/nestervear/nanuk">github</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <img src="wordmark.png" alt="NANUK, con un oso polar caminando sobre una línea de hielo" width="1400" height="380">
+    <p class="lead">Un oso polar en la oscuridad absoluta. Arch Linux + Hyprland, negro puro, un solo acento de hielo, y una regla de oro: <b>las actualizaciones jamás tocan tu configuración.</b></p>
+    <div class="actions">
+      <a class="btn primary" href="https://github.com/nestervear/nanuk/releases/latest">Descargar ISO <small>UEFI · x86_64</small></a>
+      <a class="btn" href="#curl">Instalar con curl <small>sobre Arch</small></a>
+    </div>
+  </div>
+
+  <section id="que-es">
+    <p class="eyebrow">Qué es</p>
+    <h2>Menos es más. Y lo tuyo es tuyo.</h2>
+    <dl class="facts grid">
+      <div>
+        <dt>dos capas</dt>
+        <dd><strong>default/</strong> es nuestro y se reemplaza en cada update. <strong>user/</strong> es tuyo y no se vuelve a tocar nunca. Atajos, monitores, alias: todo sobrevive.</dd>
+      </div>
+      <div>
+        <dt>densidad estricta</dt>
+        <dd>Gaps 0, bordes de 1 px, radio 0, barra de 24 px. Hielo <strong>#9fd8ff</strong> solo en la ventana con foco y el cursor.</dd>
+      </div>
+      <div>
+        <dt>para programar e imprimir en 3D</dt>
+        <dd>Neovim (LazyVim), Docker, mise y rustup, libvirt de serie. FreeCAD y OrcaSlicer. Bases de datos en contenedores, no nativas.</dd>
+      </div>
+      <div>
+        <dt>en lua, sin magia</dt>
+        <dd>Hyprland configurado en Lua nativo. Cada script del instalador hace una cosa y se entiende leyéndolo.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section id="instalar">
+    <p class="eyebrow">Instalar</p>
+    <h2>Dos caminos, el mismo resultado.</h2>
+    <p class="muted">Elige uno. <b>A</b> si no tienes nada instalado: la ISO lo hace todo. <b>B</b> si ya tienes un Arch limpio: un solo comando.</p>
+
+    <div class="path" id="iso">
+      <div class="path-head"><span class="k">A</span><h3>Desde la ISO de Nanuk</h3></div>
+      <p class="muted">La ISO instala Arch y Nanuk en un solo paso. No hace falta saber nada de Arch. Solo UEFI.</p>
+      <ol class="steps">
+        <li><b>Descarga la ISO</b> del <a href="https://github.com/nestervear/nanuk/releases/latest">último release</a> y comprueba el <code>sha256</code>.</li>
+        <li><b>Grábala en una USB</b> y arranca desde ella <b>en modo UEFI</b> (ver <a href="#uefi">cómo activarlo</a>; es obligatorio).</li>
+        <li><b>Responde las preguntas</b>: teclado, idioma, usuario, disco. Puedes usar un disco entero o elegir partición por punto de montaje y conservar tu <code>/home</code>. Cifrado opcional.</li>
+        <li><b>Reinicia.</b> Splash del oso, autologin, Hyprland.</li>
+      </ol>
+      <h4>Grabar la USB (Linux)</h4>
+      <div class="cmd">
+        <pre><span class="p">$ </span>sudo dd if=nanuk-*.iso of=/dev/sdX bs=4M status=progress oflag=sync</pre>
+        <button class="copy" type="button" data-copy="sudo dd if=nanuk-*.iso of=/dev/sdX bs=4M status=progress oflag=sync">copiar</button>
+      </div>
+    </div>
+
+    <div class="path" id="curl">
+      <div class="path-head"><span class="k">B</span><h3>Sobre un Arch ya instalado, con curl</h3></div>
+      <p class="muted">Nanuk se monta encima de un Arch <b>limpio</b>: sin escritorio, con un usuario normal que tenga sudo, e internet. Si ya lo tienes, salta al comando final.</p>
+
+      <h4>Antes: instalar Arch limpio con archinstall</h4>
+      <ol class="steps">
+        <li><b>Descarga la ISO oficial</b> de <a href="https://archlinux.org/download/">archlinux.org</a>, grábala en una USB y arranca <b>en modo UEFI</b> (<a href="#uefi">cómo activarlo</a>).</li>
+        <li><b>Conecta a internet.</b> Ethernet conecta sola. Para Wi-Fi usa <code>iwd</code>, que ya viene en la ISO (guía completa en la <a href="https://wiki.archlinux.org/title/Iwd">wiki de Arch: iwd</a>):
+          <div class="cmd">
+            <pre><span class="p"># </span>iwctl
+<span class="p">[iwd]# </span>station wlan0 scan
+<span class="p">[iwd]# </span>station wlan0 get-networks
+<span class="p">[iwd]# </span>station wlan0 connect "nombre de tu red"
+<span class="p">[iwd]# </span>exit
+<span class="p"># </span>ping -c 2 archlinux.org</pre>
+          </div>
+        </li>
+        <li><b>Ejecuta <code>archinstall</code></b> y elige en cada apartado:
+          <ul class="opts">
+            <li><span>Disco</span> "Best-effort default partition layout", ext4 o btrfs, disco entero.</li>
+            <li><span>Cifrado</span> opcional: "Disk encryption" con una contraseña. La pedirá en cada arranque; protege tus datos si pierdes el equipo.</li>
+            <li><span>Bootloader</span> Limine, el de Nanuk. También valen systemd-boot o GRUB.</li>
+            <li><span>Usuario</span> "User account": crea el tuyo y responde <b>sí</b> a superuser (sudo). La contraseña de root puede quedar vacía.</li>
+            <li><span>Perfil</span> Minimal. Sin escritorio: Nanuk trae el suyo.</li>
+            <li><span>Audio</span> No audio server. Nanuk instala PipeWire.</li>
+            <li><span>Red</span> "Use NetworkManager".</li>
+            <li><span>Zona horaria</span> la tuya, con NTP activado.</li>
+          </ul>
+        </li>
+        <li><b>Install</b>, reinicia y saca la USB. Entras en una consola de texto: escribe tu usuario y contraseña.</li>
+      </ol>
+
+      <h4>Después: el comando</h4>
+      <p class="muted">Ya dentro de tu Arch, con internet (<code>ping -c 2 archlinux.org</code>). Clona el repo y corre los pasos 01 a 07; tarda entre 15 y 40 minutos según la conexión.</p>
+      <div class="cmd">
+        <pre><span class="p">$ </span>curl -fsSL https://raw.githubusercontent.com/nestervear/nanuk/main/boot.sh | bash</pre>
+        <button class="copy" type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/nestervear/nanuk/main/boot.sh | bash">copiar</button>
+      </div>
+      <p class="muted">¿Vienes de Omarchy? Hay migración en dos fases con vuelta atrás: <a href="https://github.com/nestervear/nanuk/blob/main/docs/desde-omarchy.md">desde-omarchy.md</a>.</p>
+    </div>
+
+    <div class="path" id="uefi">
+      <div class="path-head"><span class="k">UEFI</span><h3>Arrancar la USB en modo UEFI</h3></div>
+      <p class="muted">Nanuk usa Limine con una imagen UKI y solo arranca en UEFI. Vale para los dos caminos: la ISO de Nanuk y la de Arch. Si la computadora arranca la USB en modo BIOS o Legacy, verás <b>"No bootable device"</b> o un menú que no es el de Nanuk.</p>
+      <ol class="steps">
+        <li><b>Entra al firmware</b> al encender: normalmente <code>F2</code>, <code>Supr</code>, <code>F10</code> o <code>Esc</code>, según la marca (Dell y Lenovo: <code>F2</code>/<code>F12</code>; HP: <code>Esc</code>/<code>F10</code>; ASUS y MSI: <code>Supr</code>).</li>
+        <li><b>Modo UEFI</b>: en "Boot", pon <b>Boot Mode: UEFI</b> y desactiva <b>CSM</b> o <b>Legacy Boot</b> si aparece.</li>
+        <li><b>Secure Boot: desactivado</b>. Las ISO de Arch y de Nanuk no están firmadas, y con Secure Boot activo la USB ni aparece.</li>
+        <li><b>Elige la USB desde el menú de arranque</b> (<code>F12</code>, <code>F11</code>, <code>F9</code> o <code>Esc</code>): escoge la entrada que empieza por <b>"UEFI:"</b> seguida del nombre de tu USB. La misma USB sin ese prefijo es el modo Legacy y no sirve.</li>
+        <li>Si después de instalar la computadora arranca Windows o el sistema viejo, vuelve al firmware y sube <b>"Nanuk"</b> (o "UEFI OS") al primer lugar del orden de arranque.</li>
+      </ol>
+      <p class="muted">En una máquina virtual es lo mismo: en virt-manager marca "Personalizar la configuración antes de instalar" y pon el firmware en <b>UEFI (OVMF)</b>; una VM creada con BIOS no se puede cambiar, hay que crear otra.</p>
+    </div>
+
+    <h4 class="after">Después, todo pasa por la CLI</h4>
+    <div class="cmd">
+      <pre><span class="p">$ </span>nanuk install &lt;paquete&gt;   <span class="p"># repo, AUR o flatpak, lo detecta solo</span>
+<span class="p">$ </span>nanuk update              <span class="p"># sistema + defaults, sin tocar user/</span>
+<span class="p">$ </span>nanuk bg next             <span class="p"># siguiente fondo (o Super+Shift+B)</span>
+<span class="p">$ </span>nanuk menu                <span class="p"># todo lo anterior sin recordar nada</span></pre>
+    </div>
+
+    <h3 style="margin-top:40px">Requisitos</h3>
+    <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Mínimo</th><th>Recomendado</th></tr></thead>
+      <tbody>
+        <tr><td>Firmware</td><td>UEFI (Limine arranca una imagen UKI)</td><td></td></tr>
+        <tr><td>CPU</td><td>x86_64</td><td>con VT-x / AMD-V para las VMs</td></tr>
+        <tr><td>GPU</td><td>cualquiera con driver libre en Mesa (Intel, AMD)</td><td>NVIDIA: no probado</td></tr>
+        <tr><td>RAM</td><td>4 GB</td><td>8 GB; 16 GB con Docker, VMs y OrcaSlicer a la vez</td></tr>
+        <tr><td>Disco para /</td><td>20 GB</td><td>40 GB o más</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section id="capturas">
+    <p class="eyebrow">Capturas</p>
+    <h2>Negro, blanco, hielo.</h2>
+    <!-- Para añadir una captura: guarda el PNG en site/screenshots/ y cambia el
+         <div class="frame"> por <div class="frame"><img src="screenshots/x.png" alt="..."></div> -->
+    <div class="shots">
+      <figure>
+        <div class="frame"><span class="pending">captura pendiente</span></div>
+        <figcaption>Escritorio: densidad estricta, hielo solo en el foco</figcaption>
+      </figure>
+      <figure>
+        <div class="frame"><span class="pending">captura pendiente</span></div>
+        <figcaption>Arranque y bloqueo: el mismo wordmark</figcaption>
+      </figure>
+      <figure>
+        <div class="frame"><span class="pending">captura pendiente</span></div>
+        <figcaption>Terminal: kitty, fastfetch con el oso, btop</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section id="docs">
+    <p class="eyebrow">Documentación</p>
+    <h2>Todo está escrito para leerse.</h2>
+    <div class="docs">
+      <a href="https://github.com/nestervear/nanuk/blob/main/docs/personalizar.md"><span class="t">Personalizar</span><span class="d">Dónde va lo tuyo, app por app, y qué toca un update.</span></a>
+      <a href="https://github.com/nestervear/nanuk/blob/main/iso/README.md"><span class="t">La ISO</span><span class="d">Qué hace el instalador paso a paso y cómo construirla.</span></a>
+      <a href="https://github.com/nestervear/nanuk/blob/main/docs/desde-omarchy.md"><span class="t">Desde Omarchy</span><span class="d">Migrar sin reinstalar, en dos fases, con rollback.</span></a>
+      <a href="https://github.com/nestervear/nanuk/blob/main/PLAN.md"><span class="t">Plan maestro</span><span class="d">Decisiones, fases y registro de cambios.</span></a>
+    </div>
+  </section>
+
+  <footer>
+    <span>nanuk · "oso polar" en inuit</span>
+    <span><a href="https://github.com/nestervear/nanuk">github.com/nestervear/nanuk</a></span>
+  </footer>
+</main>
+
+<script>
+  // Botón copiar: pone el comando en el portapapeles y lo dice durante un momento.
+  document.querySelectorAll('.copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(btn.dataset.copy).then(function () {
+        btn.textContent = 'copiado'; btn.dataset.done = '1';
+        setTimeout(function () { btn.textContent = 'copiar'; delete btn.dataset.done; }, 1600);
+      }).catch(function () { btn.textContent = 'ctrl+c'; });
+    });
+  });
+</script>
+</body>
+</html>

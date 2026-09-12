@@ -67,7 +67,7 @@
     "tooltip-format-wifi": "{essid}   {signalStrength}%   {ipaddr}",
     "tooltip-format-ethernet": "{ifname}   {ipaddr}",
     "tooltip-format-disconnected": "sin red",
-    "on-click": "kitty nmtui"
+    "on-click": "kitty --class nanuk.tui nmtui"
   },
 
   "bluetooth": {
@@ -76,7 +76,7 @@
     "format-disabled": "",
     "format-connected": "󰂱",
     "tooltip-format-connected": "{device_alias}",
-    "on-click": "kitty bluetoothctl"
+    "on-click": "kitty --class nanuk.tui bluetoothctl"
   },
 
   "tray": { "spacing": 10 }

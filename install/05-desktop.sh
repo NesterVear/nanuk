@@ -88,7 +88,12 @@ add_kernel_params() {
     echo "⚠ bootloader no reconocido: añade a mano 'quiet splash' a la línea del kernel"
   fi
 }
-add_kernel_params quiet splash
+# plymouth.ignore-serial-consoles: el stub de systemd de la UKI añade
+# `console=uart,...` cuando el firmware tiene consola serie (VMs con OVMF), y
+# con una consola serie Plymouth pide la contraseña LUKS en texto en vez de
+# dibujar el splash. Con este parámetro la ignora. En hardware sin serie no
+# cambia nada.
+add_kernel_params quiet splash plymouth.ignore-serial-consoles
 
 # -R = además de fijar el tema, regenera el initramfs (mkinitcpio -P).
 echo "→ plymouth-set-default-theme -R nanuk (regenera initramfs, tarda un poco)"
@@ -117,7 +122,8 @@ sudo tee "$GETTY_DIR/autologin.conf" >/dev/null <<EOF
 ExecStart=
 ExecStart=-/usr/bin/agetty --autologin $USER --noclear %I \$TERM
 EOF
-sudo systemctl daemon-reload
+# En un chroot (ISO) no hay systemd al que recargar; el drop-in se lee al arrancar.
+sudo systemctl daemon-reload 2>/dev/null || true
 echo "✔ autologin de $USER en tty1"
 
 # Bloque en ~/.bash_profile delimitado por marcadores, para poder
@@ -142,6 +148,24 @@ EOF
   echo "✔ arranque de Hyprland añadido a $PROFILE"
 fi
 
+# ── 2b. Keyring sin preguntas repetidas ────────────────────────────
+# gnome-keyring guarda contraseñas de Brave, VS Code, etc. Con autologin
+# nadie teclea contraseña al entrar, así que el keyring "login" queda
+# cerrado y cada app pregunta por él. Solución: pam_gnome_keyring en
+# /etc/pam.d/login. `session ... auto_start` arranca el demonio al entrar y
+# `auth` lo abre con la contraseña que tecleas en hyprlock, porque
+# /etc/pam.d/hyprlock hace `auth include login`. Una sola contraseña para todo.
+PAM_LOGIN=/etc/pam.d/login
+if ! grep -q pam_gnome_keyring "$PAM_LOGIN"; then
+  sudo sed -i '/^auth.*system-local-login/a auth       optional     pam_gnome_keyring.so' "$PAM_LOGIN"
+  echo 'session    optional     pam_gnome_keyring.so auto_start' | sudo tee -a "$PAM_LOGIN" >/dev/null
+  echo "✔ pam_gnome_keyring en $PAM_LOGIN"
+fi
+if [[ ! -f /etc/pam.d/hyprlock ]]; then
+  printf 'auth include login\naccount include login\n' | sudo tee /etc/pam.d/hyprlock >/dev/null
+  echo "✔ /etc/pam.d/hyprlock creado"
+fi
+
 # ── 3. Apps por defecto ─────────────────────────────────────────────
 # xdg-settings/xdg-mime escriben en ~/.config/mimeapps.list. El primero que
 # exista gana; el usuario lo cambia luego con `xdg-settings set ...`.
@@ -152,5 +176,24 @@ for d in firefox.desktop brave-origin.desktop brave-browser.desktop chromium.des
   fi
 done
 xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
+
+# ── 4. Apariencia GTK vía gsettings ────────────────────────────────
+# Las apps de libadwaita (Nautilus, diálogos de archivo, evince…) NO leen
+# settings.ini en Wayland: toman modo oscuro, iconos, cursor y fuente de
+# gsettings a través del portal (xdg-desktop-portal-gtk). Sin esto quedan en
+# modo claro y nuestro gtk.css negro deja el texto negro sobre negro: por eso
+# "no se veían las carpetas" en Nautilus. Es por usuario; no necesita sudo.
+if command -v gsettings &>/dev/null; then
+  gsettings set org.gnome.desktop.interface color-scheme  'prefer-dark'
+  gsettings set org.gnome.desktop.interface gtk-theme     'Adwaita-dark'
+  gsettings set org.gnome.desktop.interface icon-theme    'Tela-circle-grey-dark'
+  gsettings set org.gnome.desktop.interface cursor-theme  'Adwaita'
+  gsettings set org.gnome.desktop.interface cursor-size   24
+  gsettings set org.gnome.desktop.interface font-name     'Noto Sans 10'
+  gsettings set org.gnome.desktop.interface monospace-font-name 'CaskaydiaMono Nerd Font 10'
+  echo "✔ gsettings: oscuro, Tela-circle-grey-dark, cursor Adwaita, Noto Sans"
+else
+  echo "⚠ sin gsettings (glib2): las apps GTK4 pueden quedar en modo claro"
+fi
 
 echo "✔ Escritorio (sistema) configurado"

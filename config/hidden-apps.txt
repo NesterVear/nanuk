@@ -1,0 +1,16 @@
+# Nanuk — entradas .desktop que NO deben salir en el launcher.
+# Son herramientas que instalan las dependencias (avahi, v4l-utils, hwloc…)
+# y solo confunden: "Examinador de servidores SSH", "Examinador de servidores
+# VNC", "Avahi Zeroconf Browser"… 06-dotfiles crea para cada una un .desktop
+# con NoDisplay=true en ~/.local/share/applications, que tiene prioridad sobre
+# el de /usr/share/applications. Para volver a ver una: borra su línea y su
+# archivo ~/.local/share/applications/<id>.desktop.
+# Las tuyas: ~/.config/nanuk/user/hidden-apps.txt (mismo formato).
+avahi-discover
+bssh
+bvnc
+qv4l2
+qvidcap
+lstopo
+cmake-gui
+electron
