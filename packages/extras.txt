@@ -2,7 +2,9 @@
 # Se instalan solo si corres el instalador con NANUK_EXTRAS=1:
 #   NANUK_EXTRAS=1 bash install/03-packages.sh
 # Los que son del AUR llevan el sufijo ":aur" para que el script sepa usar yay.
-keepassxc
+
+r                  # lenguaje R (pesado; `nanuk lang r` también lo instala)
+mariadb            # base de datos nativa; por defecto Nanuk las deja en Docker (puerto 3306 libre)
 obsidian
 localsend
 libreoffice-fresh

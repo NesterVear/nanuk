@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=WhatsApp
+Comment=Mensajería (app web en Brave)
+Exec=nanuk-webapp https://web.whatsapp.com --focus
+Icon=brave-origin
+Terminal=false
+Categories=Network;InstantMessaging;
+StartupWMClass=brave-web.whatsapp.com__-Default

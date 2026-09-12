@@ -4,7 +4,7 @@
 #
 #   - Rust: toolchain 'stable' con rustup.
 #   - Neovim: LazyVim (si no hay config previa) + colorscheme Nanuk.
-#   - Docker / MariaDB / grupos: ya se hizo en 04-services.
+#   - Docker / grupos: ya se hizo en 04-services. Bases de datos: en Docker.
 #   - PHP, Python, R, Node, Lua: se instalan como paquetes en 03; nada
 #     que configurar aquí. Versiones extra: `nanuk lang <lenguaje>`.
 # ─────────────────────────────────────────────────────────────────────

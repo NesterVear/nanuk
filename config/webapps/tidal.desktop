@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Tidal
+Comment=Música (app web en Brave)
+Exec=nanuk-webapp https://listen.tidal.com --focus
+Icon=brave-origin
+Terminal=false
+Categories=AudioVideo;Audio;
+StartupWMClass=brave-listen.tidal.com__-Default

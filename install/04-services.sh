@@ -68,12 +68,16 @@ if pacman -Qq libvirt &>/dev/null; then
   echo "✔ libvirt listo (cierra sesión para entrar al grupo libvirt)"
 fi
 
-# ── MariaDB: inicializar datadir solo la primera vez ────────────────
+# ── MariaDB (solo si se instaló desde extras.txt) ───────────────────
+# Por defecto Nanuk NO trae base de datos nativa: van en Docker, y así el
+# puerto 3306 queda libre para los contenedores de tus proyectos.
+if command -v mariadb-install-db &>/dev/null; then
 if [[ ! -d /var/lib/mysql/mysql ]]; then
   echo "→ Inicializando MariaDB..."
   sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
 fi
 sudo systemctl enable --now mariadb
+fi
 
 # ── zram: swap comprimida en RAM ───────────────────────────────────
 # zram-generator crea /dev/zram0 al arrancar leyendo este archivo.

@@ -99,6 +99,17 @@ sudo plymouth-set-default-theme -R nanuk
 # no hay contraseña y se entra directo. En ambos casos hyprlock bloquea la
 # sesión, así que un display manager solo sería una pantalla de más. agetty
 # inicia sesión sola en tty1 y ~/.bash_profile lanza Hyprland en esa tty.
+# Si la máquina venía con un display manager (Omarchy 4 usa sddm), lo
+# desactivamos: si no, sddm y el autologin de tty1 abrirían DOS sesiones.
+# Solo `disable` (no `stop`): si estás dentro de esa sesión, pararlo te
+# echaría. Hace efecto al reiniciar.
+for dm in sddm gdm lightdm ly greetd lemurs; do
+  if systemctl is-enabled "$dm" &>/dev/null; then
+    sudo systemctl disable "$dm"
+    echo "✔ $dm desactivado (Nanuk entra por autologin en tty1)"
+  fi
+done
+
 GETTY_DIR=/etc/systemd/system/getty@tty1.service.d
 sudo install -d "$GETTY_DIR"
 sudo tee "$GETTY_DIR/autologin.conf" >/dev/null <<EOF

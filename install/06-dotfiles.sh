@@ -10,7 +10,7 @@
 #
 # Después, cada app se conecta a esas capas:
 #   - Hyprland: ~/.config/hypr/hyprland.lua carga default → theme → user.
-#   - Apps sin include (waybar, foot, kitty, mako, wofi, gtk): symlink a
+#   - Apps sin include (waybar, kitty, mako, wofi, gtk): symlink a
 #     user/<app> si existe, si no a default/<app>. Para personalizar una app
 #     entera: cp -r default/waybar user/waybar, edita, y re-ejecuta este paso.
 # ─────────────────────────────────────────────────────────────────────
@@ -69,7 +69,6 @@ link_layered() {
 }
 
 link_layered "$HOME/.config/waybar"              waybar
-link_layered "$HOME/.config/foot"                foot
 link_layered "$HOME/.config/kitty"               kitty
 link_layered "$HOME/.config/mako"                mako
 link_layered "$HOME/.config/wofi"                wofi
@@ -113,6 +112,22 @@ for script in "$NANUK_ROOT"/bin/nanuk "$NANUK_ROOT"/bin/nanuk-*; do
   ln -sfn "$script" "$HOME/.local/bin/$(basename "$script")"
 done
 echo "✔ scripts enlazados en ~/.local/bin (nanuk, nanuk-*)"
+
+# ── 6b. Apps web → ~/.local/share/applications (para el launcher) ───
+# default/webapps/*.desktop y user/webapps/*.desktop se enlazan como
+# nanuk-webapp-<nombre>.desktop. Si user/ tiene el mismo nombre, gana.
+# Primero se limpian los enlaces nuestros rotos (una app web que ya no existe).
+APPS_DIR="$HOME/.local/share/applications"
+mkdir -p "$APPS_DIR"
+find "$APPS_DIR" -maxdepth 1 -name 'nanuk-webapp-*.desktop' -xtype l -delete
+for layer in default user; do
+  for entry in "$NANUK_CFG/$layer"/webapps/*.desktop; do
+    [[ -f "$entry" ]] || continue
+    ln -sfn "$entry" "$APPS_DIR/nanuk-webapp-$(basename "$entry")"
+  done
+done
+command -v update-desktop-database &>/dev/null && update-desktop-database "$APPS_DIR" 2>/dev/null || true
+echo "✔ apps web enlazadas en $APPS_DIR"
 
 # ── 7. Bash: bloque con marcadores en ~/.bashrc ────────────────────
 BASHRC="$HOME/.bashrc"

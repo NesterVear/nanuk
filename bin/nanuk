@@ -12,6 +12,8 @@
 #   nanuk list                   muestra tu lista personal
 #   nanuk sync                   instala todo lo de tu lista (máquina nueva)
 #   nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+#   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
+#   nanuk menu                   menú interactivo: paquetes, apps web, lenguajes...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
 #   nanuk edit                   abre tu capa de config en $EDITOR
 #   nanuk doctor                 diagnóstico rápido del sistema
@@ -181,6 +183,142 @@ cmd_theme() {
   echo "  (el splash de arranque no cambia: para eso, bash $REPO/install/05-desktop.sh)"
 }
 
+# ── Apps web ─────────────────────────────────────────────────────
+# nanuk webapp add "Nombre" https://url   → user/webapps/<slug>.desktop + enlace
+# nanuk webapp remove <slug>
+# nanuk webapp list
+# El .desktop vive en TU capa (sobrevive a los updates) y se enlaza en
+# ~/.local/share/applications para que salga en el launcher. Lo abre
+# bin/nanuk-webapp (modo --app de Brave, --focus = enfocar si ya está abierta).
+WEBAPPS_USER="$NANUK_CFG/user/webapps"
+WEBAPPS_DEFAULT="$NANUK_CFG/default/webapps"
+APPS_DIR="$HOME/.local/share/applications"
+
+# "Google Maps" → google-maps
+slugify() { tr '[:upper:]' '[:lower:]' <<<"$1" | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g'; }
+
+cmd_webapp() {
+  local sub="${1:-list}"; shift || true
+  case "$sub" in
+    add)
+      local name="${1:-}" url="${2:-}"
+      [[ -n "$name" && -n "$url" ]] || die 'uso: nanuk webapp add "Nombre" https://url'
+      [[ "$url" =~ ^https?:// ]] || url="https://$url"
+      local slug; slug="$(slugify "$name")"
+      [[ -n "$slug" ]] || die "no puedo sacar un nombre de archivo de '$name'"
+      # Clase de ventana que pondrá Brave (brave-<host>__-Default): sirve para
+      # que el launcher asocie la ventana a esta entrada.
+      local host; host="$(sed -E 's#^[a-z]+://##; s#[/:].*$##' <<<"$url")"
+      mkdir -p "$WEBAPPS_USER" "$APPS_DIR"
+      cat > "$WEBAPPS_USER/$slug.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=$name
+Comment=App web ($host) en Brave
+Exec=nanuk-webapp $url --focus
+Icon=brave-origin
+Terminal=false
+Categories=Network;
+StartupWMClass=brave-${host}__-Default
+EOF
+      ln -sfn "$WEBAPPS_USER/$slug.desktop" "$APPS_DIR/nanuk-webapp-$slug.desktop"
+      command -v update-desktop-database &>/dev/null && update-desktop-database "$APPS_DIR" 2>/dev/null || true
+      say "app web '$name' → $url"
+      echo "  archivo: $WEBAPPS_USER/$slug.desktop (tu capa)"
+      echo "  ya sale en el launcher. Atajo opcional en user/hypr/bindings.lua:"
+      echo "    n.bind(\"SUPER + SHIFT + X\", \"$name\", \"nanuk-webapp $url --focus\")"
+      ;;
+    remove|rm)
+      local slug="${1:-}"; [[ -n "$slug" ]] || die "uso: nanuk webapp remove <nombre>   (mira: nanuk webapp list)"
+      slug="$(slugify "$slug")"
+      if [[ -f "$WEBAPPS_USER/$slug.desktop" ]]; then
+        rm -f "$WEBAPPS_USER/$slug.desktop" "$APPS_DIR/nanuk-webapp-$slug.desktop"
+        say "quitada: $slug"
+      elif [[ -f "$WEBAPPS_DEFAULT/$slug.desktop" ]]; then
+        die "'$slug' viene con Nanuk (default/webapps), no es tuya. Para ocultarla del launcher: rm $APPS_DIR/nanuk-webapp-$slug.desktop (reaparece con el próximo update)"
+      else
+        die "no existe la app web '$slug' (mira: nanuk webapp list)"
+      fi
+      ;;
+    list|ls)
+      local f any=0
+      echo "${B}Apps web${X} (nombre → URL)"
+      for f in "$WEBAPPS_DEFAULT"/*.desktop "$WEBAPPS_USER"/*.desktop; do
+        [[ -f "$f" ]] || continue
+        any=1
+        local origin="nanuk"; [[ "$f" == "$WEBAPPS_USER"/* ]] && origin="tuya"
+        printf "  %-14s %-16s %s\n" "$(basename "$f" .desktop)" "[$origin]" \
+          "$(sed -n 's/^Exec=nanuk-webapp \([^ ]*\).*/\1/p' "$f")"
+      done
+      (( any )) || echo "  ninguna. Añade una con: nanuk webapp add \"Nombre\" https://url"
+      ;;
+    *) die "uso: nanuk webapp add \"Nombre\" <url> | remove <nombre> | list" ;;
+  esac
+}
+
+# ── Menú interactivo ─────────────────────────────────────────────
+# Para quien no quiere aprenderse comandos: todo lo de arriba, con gum.
+# Cada opción llama al mismo cmd_* que la CLI, así que el resultado es el
+# mismo (y queda anotado en tu capa igual).
+cmd_menu() {
+  command -v gum &>/dev/null || die "falta 'gum' (está en base.txt): sudo pacman -S gum"
+  # Estética Nanuk: hielo solo en el cursor (el foco), el resto gris/blanco.
+  export GUM_CHOOSE_CURSOR_FOREGROUND="#9fd8ff" GUM_CHOOSE_HEADER_FOREGROUND="#909090" \
+         GUM_CHOOSE_SELECTED_FOREGROUND="#ffffff" GUM_INPUT_CURSOR_FOREGROUND="#9fd8ff" \
+         GUM_INPUT_PROMPT_FOREGROUND="#909090" GUM_CONFIRM_SELECTED_BACKGROUND="#9fd8ff" \
+         GUM_CONFIRM_SELECTED_FOREGROUND="#000000" GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e"
+  local choice
+  while true; do
+    echo
+    choice="$(gum choose --header "nanuk · ¿qué quieres hacer?" \
+      "Instalar un paquete" \
+      "Quitar un paquete" \
+      "Añadir una app web (nombre + URL)" \
+      "Quitar una app web" \
+      "Instalar un lenguaje" \
+      "Actualizar el sistema" \
+      "Diagnóstico (doctor)" \
+      "Salir")" || return 0
+    case "$choice" in
+      "Instalar un paquete")
+        local pkgs; pkgs="$(gum input --placeholder "nombre del paquete (o varios separados por espacio)")" || continue
+        [[ -n "$pkgs" ]] || continue
+        # shellcheck disable=SC2086  # queremos que se separe por espacios
+        cmd_install $pkgs || true ;;
+      "Quitar un paquete")
+        ensure_list
+        local pkg
+        if [[ -s "$LIST" ]]; then
+          pkg="$(sed 's/:aur$//; s/^flatpak://' "$LIST" | gum choose --header "de tu lista personal")" || continue
+        else
+          pkg="$(gum input --placeholder "nombre del paquete")" || continue
+        fi
+        [[ -n "$pkg" ]] || continue
+        gum confirm "¿Quitar $pkg?" && { cmd_remove "$pkg" || true; } ;;
+      "Añadir una app web (nombre + URL)")
+        local name url
+        name="$(gum input --placeholder "Nombre (p. ej. YouTube)")" || continue
+        url="$(gum input --placeholder "URL (p. ej. youtube.com)")" || continue
+        [[ -n "$name" && -n "$url" ]] || continue
+        cmd_webapp add "$name" "$url" || true ;;
+      "Quitar una app web")
+        local slug
+        slug="$(for f in "$WEBAPPS_USER"/*.desktop; do [[ -f "$f" ]] && basename "$f" .desktop; done | gum choose --header "tus apps web")" || continue
+        [[ -n "$slug" ]] || { echo "  no tienes apps web propias (las de Nanuk no se quitan desde aquí)"; continue; }
+        cmd_webapp remove "$slug" || true ;;
+      "Instalar un lenguaje")
+        local lang
+        lang="$(gum choose --header "lenguaje" rust node python go ruby java php r)" || continue
+        cmd_lang "$lang" || true ;;
+      "Actualizar el sistema")
+        gum confirm "¿Actualizar sistema, AUR, flatpak y config por defecto?" && { cmd_update || true; } ;;
+      "Diagnóstico (doctor)")
+        cmd_doctor ;;
+      "Salir"|"") return 0 ;;
+    esac
+  done
+}
+
 cmd_edit() {
   local ed="${EDITOR:-nvim}"
   exec "$ed" "$NANUK_CFG/user"
@@ -239,7 +377,7 @@ Lenguajes y toolchains.   Uso: nanuk lang <nombre...>
   ruby     mise: ruby@latest
   java     mise: java@lts
   php      pacman: php + composer (ya viene de serie)
-  r        pacman: r (ya viene de serie)
+  r        pacman: r (no viene de serie; también está en packages/extras.txt)
 
 Instalados ahora mismo:
 EOF
@@ -285,6 +423,9 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk list                   muestra tu lista personal
   nanuk sync                   instala todo lo de tu lista (máquina nueva)
   nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+  nanuk webapp add "Nombre" <url>   crea una app web (Brave, ventana propia) en tu capa
+  nanuk webapp remove <nombre> | list
+  nanuk menu                   menú interactivo con todo lo anterior (también Super+Shift+I)
   nanuk theme [<tema>]         lista temas / cambia el activo
   nanuk lang [<lenguaje...>]   instala/lista lenguajes (rust node python go php r ...)
   nanuk keys                   chuleta de atajos de teclado (también Super+K)
@@ -303,6 +444,8 @@ case "$cmd" in
   sync)        cmd_sync ;;
   update|up)   cmd_update ;;
   theme)       cmd_theme "$@" ;;
+  webapp|web)  cmd_webapp "$@" ;;
+  menu|m)      cmd_menu ;;
   lang)        cmd_lang "$@" ;;
   keys)        exec nanuk-keys ;;
   edit)        cmd_edit ;;

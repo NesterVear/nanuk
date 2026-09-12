@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────
+# nanuk-webapp — abre una URL como "app web": ventana propia, sin barra
+# de direcciones ni pestañas (modo --app de los navegadores Chromium).
+#
+#   nanuk-webapp <url>            abre una ventana nueva
+#   nanuk-webapp <url> --focus    si ya hay una ventana de esa app, la
+#                                 enfoca en vez de abrir otra (chats, música)
+#
+# Navegador: brave-origin si está (packages/aur.txt); si no, el navegador
+# por defecto siempre que sea de la familia Chromium (Firefox no tiene
+# modo app). Los .desktop de las apps web viven en:
+#   ~/.config/nanuk/default/webapps/   (las nuestras)
+#   ~/.config/nanuk/user/webapps/      (las tuyas; misma sintaxis)
+# y 06-dotfiles.sh los enlaza en ~/.local/share/applications/ para wofi.
+# ─────────────────────────────────────────────────────────────────────
+set -euo pipefail
+
+url="${1:-}"
+[[ -n "$url" ]] || { echo "uso: nanuk-webapp <url> [--focus]" >&2; exit 1; }
+focus=0
+[[ "${2:-}" == "--focus" ]] && focus=1
+
+# ── Navegador ───────────────────────────────────────────────────────
+browser=""
+for candidate in brave-origin brave chromium google-chrome-stable; do
+  if command -v "$candidate" &>/dev/null; then browser="$candidate"; break; fi
+done
+[[ -n "$browser" ]] || { echo "nanuk-webapp: no hay un navegador Chromium (instala brave-origin-bin)" >&2; exit 1; }
+
+# ── ¿Ya está abierta? ───────────────────────────────────────────────
+# Chromium pone de clase de ventana "brave-<host>__-Default". Buscamos ese
+# host entre las ventanas de Hyprland y, si existe, la enfocamos por su
+# dirección. Hyprland ≥ 0.56 quiere el dispatcher en sintaxis Lua
+# (hl.dsp.focus); si falla, probamos la sintaxis clásica (versiones viejas).
+if (( focus )) && command -v hyprctl &>/dev/null && command -v jq &>/dev/null; then
+  host="$(sed -E 's#^[a-z]+://##; s#[/:].*$##' <<<"$url")"
+  class_re="^[a-z-]+-${host//./\\.}__"     # puntos escapados: web\.whatsapp\.com
+  addr="$(hyprctl clients -j | jq -r --arg re "$class_re" '[.[] | select(.class | test($re))][0].address // empty')"
+  if [[ -n "$addr" ]]; then
+    hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1 \
+      || hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1
+    exit 0
+  fi
+fi
+
+# ── Lanzar ──────────────────────────────────────────────────────────
+# uwsm-app la convierte en unidad de systemd de usuario (sobrevive a
+# hyprctl reload); setsid la despega de quien la lanzó (wofi, el atajo).
+if command -v uwsm-app &>/dev/null; then
+  exec setsid uwsm-app -- "$browser" --app="$url" >/dev/null 2>&1
+else
+  exec setsid "$browser" --app="$url" >/dev/null 2>&1
+fi

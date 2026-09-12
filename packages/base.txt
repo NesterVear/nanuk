@@ -23,13 +23,12 @@ networkmanager
 bluez
 bluez-utils
 power-profiles-daemon
-thermald
 zram-generator
+# thermald (solo Intel) lo añade 03-packages.sh según la CPU, igual que el microcode.
 
 # CLI de diario (los que ya usas hoy)
 fastfetch
 btop
-htop
 tree
 jq
 fzf
@@ -41,3 +40,4 @@ zoxide
 starship
 tmux
 tldr
+gum                # menús interactivos de la CLI (nanuk menu)

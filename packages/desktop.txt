@@ -14,9 +14,7 @@ mako
 hyprlock
 hypridle
 
-# Terminales: foot es el default; kitty para comparar con herramientas CLI
-foot
-foot-terminfo
+# Terminal
 kitty
 
 # Capturas, color, portapapeles, brillo, media
@@ -45,7 +43,7 @@ polkit
 gnome-keyring
 libsecret
 
-# Navegador (Brave va por flatpak, ver flatpak.txt)
+# Navegador por defecto. Brave Origin (secundario, modo app web) va por el AUR: aur.txt
 firefox
 
 # Archivos y visores
@@ -70,7 +68,6 @@ ttf-cascadia-mono-nerd
 ttf-nerd-fonts-symbols
 noto-fonts
 noto-fonts-emoji
-noto-fonts-cjk
 
 # Flatpak (para OrcaSlicer y otras apps de flatpak.txt)
 flatpak

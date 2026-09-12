@@ -3,7 +3,7 @@
 # Paso 03 — Paquetes.
 #
 # Lee las listas de packages/*.txt e instala en tres tandas:
-#   1. repos oficiales  → pacman   (base, desktop, dev, 3dprint)   ← CRÍTICO
+#   1. repos oficiales  → pacman   (base, desktop, dev, 3dprint, virt, security)   ← CRÍTICO
 #   2. AUR              → yay      (aur.txt)                        ← opcional
 #   3. flatpak          → flathub  (flatpak.txt)                    ← opcional
 # Con NANUK_EXTRAS=1 instala además extras.txt (apps personales).
@@ -30,16 +30,22 @@ read_list() {
 
 # ── 1. Repos oficiales (crítico) ───────────────────────────────────
 # mapfile mete cada línea de la salida en un elemento del array.
-mapfile -t PACMAN_PKGS < <(read_list "$PKG_DIR"/{base,desktop,dev,3dprint,virt}.txt)
+mapfile -t PACMAN_PKGS < <(read_list "$PKG_DIR"/{base,desktop,dev,3dprint,virt,security}.txt)
 
 # Microcode según el fabricante de la CPU (correcciones de firmware al arranque).
+# thermald (control térmico) solo existe para Intel: en AMD no hace nada.
 case "$(grep -m1 '^vendor_id' /proc/cpuinfo)" in
-  *GenuineIntel*)  PACMAN_PKGS+=(intel-ucode) ;;
+  *GenuineIntel*)  PACMAN_PKGS+=(intel-ucode thermald) ;;
   *AuthenticAMD*)  PACMAN_PKGS+=(amd-ucode) ;;
 esac
 
 echo "→ pacman: ${#PACMAN_PKGS[@]} paquetes"
 sudo pacman -S --needed --noconfirm "${PACMAN_PKGS[@]}"
+# Marcarlos como instalados "explícitamente". Si alguno ya estaba como
+# dependencia de otra cosa (p. ej. de un paquete de Omarchy), `--needed` lo
+# salta y se queda como dependencia: un `pacman -Rns` de esa otra cosa se lo
+# llevaría por delante. Así quedan protegidos. Idempotente.
+sudo pacman -D --asexplicit "${PACMAN_PKGS[@]}" >/dev/null
 
 # ── 2. AUR (opcional) ──────────────────────────────────────────────
 # aur_install: instala del AUR y, si algo falla (paru roto, paquete que ya no

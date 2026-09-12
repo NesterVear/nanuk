@@ -10,4 +10,4 @@ no_actions=true
 insensitive=true
 matching=fuzzy
 gtk_dark=true
-term=foot
+term=kitty

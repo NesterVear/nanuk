@@ -3,7 +3,7 @@
 
 add_newline = true
 command_timeout = 3000
-format = "[$directory$git_branch$git_status]($style)$character"
+format = "[$directory$git_branch$git_status]($style)$python$character"
 
 [character]
 success_symbol = "[❯](bold white)"
@@ -19,6 +19,17 @@ repo_root_format = "[$repo_root]($repo_root_style)[$path]($style)[$read_only]($r
 [git_branch]
 format = "[$branch]($style) "
 style = "italic #909090"
+
+# Entorno virtual de Python. starship reescribe PS1 en cada prompt, así que
+# el "(venv)" que añade `source .venv/bin/activate` se pierde; este módulo lo
+# vuelve a pintar. Con las listas de detección vacías SOLO aparece cuando hay
+# un venv activo (no en cada carpeta con un .py).
+[python]
+format = '[(\($virtualenv\) )]($style)'
+style = "#b0b0b0"
+detect_extensions = []
+detect_files = []
+detect_folders = []
 
 [git_status]
 format     = '[$all_status]($style)'

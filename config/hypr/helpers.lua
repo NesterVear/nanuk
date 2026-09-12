@@ -10,13 +10,12 @@ n = n or {}
 -- Los bindings leen esta tabla. Para cambiar una app, en
 -- ~/.config/nanuk/user/hypr/apps.lua escribe p. ej.:  n.apps.terminal = "kitty"
 n.apps = {
-  terminal = "foot",
-  terminal_alt = "kitty",
+  terminal = "kitty",
   launcher = "wofi",
   -- gtk-launch abre el .desktop del navegador por defecto (xdg-settings).
   browser = 'gtk-launch "$(xdg-settings get default-web-browser)"',
   files = "nautilus --new-window",
-  editor = "foot nvim",
+  editor = "kitty nvim",
   power_menu = "nanuk-power-menu",
 }
 
@@ -62,7 +61,7 @@ end
 
 -- ── Atajos ──────────────────────────────────────────────────────────
 
--- n.bind("SUPER + RETURN", "Terminal", "foot")
+-- n.bind("SUPER + RETURN", "Terminal", "kitty")
 -- n.bind("SUPER + W", "Cerrar", hl.dsp.window.close())
 -- Si el tercer argumento es un string, se ejecuta como comando de shell;
 -- si es un dispatcher de hl.dsp.*, se usa tal cual. La descripción queda

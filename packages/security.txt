@@ -1,0 +1,8 @@
+# Nanuk — seguridad y privacidad (repos oficiales). Va en la base.
+# Para quien quiera experimentar sin tener que buscar qué instalar.
+keepassxc              # gestor de contraseñas (base de datos local, cifrada)
+tor                    # el daemon: proxy SOCKS en 127.0.0.1:9050 para otras apps.
+                       # NO se activa solo:  sudo systemctl enable --now tor
+torbrowser-launcher    # descarga, verifica (firma) y actualiza Tor Browser en
+                       # ~/.local/share/torbrowser al primer arranque. Trae su
+                       # propio tor: no necesita el daemon de arriba.

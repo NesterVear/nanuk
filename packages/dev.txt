@@ -6,7 +6,6 @@ lazygit
 lazydocker
 git-delta          # diffs bonitos (lazygit/git lo usan)
 github-cli
-gum                # bloques interactivos para los scripts de Nanuk
 
 # Contenedores
 docker
@@ -19,7 +18,6 @@ python-pip
 uv
 php
 composer
-r
 nodejs
 npm
 lua
@@ -30,5 +28,6 @@ tree-sitter-cli
 mise               # node / python / go / ruby / java...  → `nanuk lang`
 rustup             # toolchains de Rust                   → `nanuk lang rust`
 
-# Base de datos
-mariadb
+# Bases de datos: ninguna en el sistema. Van en contenedores (docker compose),
+# así no se pisan con los puertos de tus proyectos. MariaDB como paquete
+# está en extras.txt si alguien la quiere nativa.
