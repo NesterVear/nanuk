@@ -209,6 +209,83 @@ update_packages() {
   echo "$head" > "$PKG_COMMIT"
 }
 
+# ── ¿Hace falta reiniciar? ───────────────────────────────────────
+# Tras actualizar no se dice "reinicia por si acaso": se mira qué cambió.
+#   · Reiniciar: el kernel que está corriendo ya no está instalado (sus módulos
+#     se borraron: un USB o la wifi podrían no cargar), o se actualizó algo del
+#     arranque o de la base del sistema (systemd, glibc, mesa, microcode…).
+#   · Cerrar sesión y volver a entrar: Hyprland y su pila, el audio, los
+#     portales, o las variables/autostart de Nanuk.
+REBOOT_PKGS='^(linux(-lts|-zen|-hardened|-rt)?|linux-firmware(-.+)?|systemd|systemd-libs|glibc|mesa|vulkan-(radeon|intel)|nvidia(-.+)?|intel-ucode|amd-ucode|cryptsetup|mkinitcpio|plymouth|limine|dbus|dbus-broker)$'
+RELOGIN_PKGS='^(hyprland|aquamarine|hyprutils|hyprlang|hyprgraphics|hyprcursor|hyprwire|uwsm|xdg-desktop-portal(-hyprland|-gtk)?|wayland|pipewire|wireplumber|mako|hypridle|hyprlock|hyprpolkitagent)$'
+
+# Paquetes instalados o actualizados desde la línea <n> de pacman.log (cada uno
+# queda como "[ALPM] upgraded <paquete> (vieja -> nueva)").
+updated_since() {
+  tail -n +"$(( $1 + 1 ))" /var/log/pacman.log 2>/dev/null \
+    | sed -nE 's/.*\[ALPM\] (upgraded|installed|reinstalled|downgraded) ([^ ]+) .*/\2/p' | sort -u
+}
+
+# ¿El kernel en marcha ya no está instalado? (mismo criterio que Omarchy: no
+# queda ningún /usr/lib/modules/<versión>/vmlinuz de la versión de uname -r).
+kernel_replaced() {
+  local k found=0
+  for k in /usr/lib/modules/*/vmlinuz; do
+    [[ -f "$k" ]] || continue
+    found=1
+    [[ "$(basename "$(dirname "$k")")" == "$(uname -r)" ]] && return 1
+  done
+  (( found ))
+}
+
+# check_restart <línea de pacman.log antes de actualizar> <commit de Nanuk antes>
+check_restart() {
+  local log_start="$1" from="$2" p hypr
+  local -a reboot=() relogin=()
+
+  if kernel_replaced; then reboot+=("kernel (corre $(uname -r) y ya hay otro instalado)"); fi
+  while read -r p; do
+    [[ -n "$p" ]] || continue
+    if [[ "$p" =~ $REBOOT_PKGS ]]; then reboot+=("$p")
+    elif [[ "$p" =~ $RELOGIN_PKGS ]]; then relogin+=("$p"); fi
+  done < <(updated_since "$log_start")
+
+  # Hyprland reemplazado mientras corre: su ejecutable aparece como "(deleted)".
+  hypr="$(pgrep -x Hyprland | head -n 1 || true)"
+  if [[ -n "$hypr" && "$(readlink "/proc/$hypr/exe" 2>/dev/null)" == *"(deleted)"* ]]; then
+    relogin+=("Hyprland (se actualizó mientras corría)")
+  fi
+  # Variables de entorno o autostart de Nanuk: solo se leen al entrar.
+  if [[ -n "$from" ]] && git -C "$REPO" cat-file -e "$from^{commit}" 2>/dev/null \
+     && ! git -C "$REPO" diff --quiet "$from" HEAD -- config/hypr/envs.lua config/hypr/autostart.lua; then
+    relogin+=("variables o autostart de Nanuk")
+  fi
+
+  # Preguntar solo si hay alguien delante (terminal) y gum; si no, avisar.
+  local ask=0
+  [[ -t 0 && -t 1 ]] && command -v gum &>/dev/null && ask=1
+  export GUM_CONFIRM_SELECTED_BACKGROUND="#9fd8ff" GUM_CONFIRM_SELECTED_FOREGROUND="#000000" \
+         GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e"
+  echo
+  if (( ${#reboot[@]} )); then
+    echo "${Y}⚠${X} Hace falta ${B}reiniciar${X} por: $(IFS=,; echo "${reboot[*]}" | sed 's/,/, /g')"
+    if (( ask )) && gum confirm "¿Reiniciar ahora?" --affirmative "Reiniciar ahora" --negative "Más tarde" --default=false; then
+      systemctl reboot
+    else
+      echo "  Cuando quieras: Super+Esc → Reiniciar"
+    fi
+  elif (( ${#relogin[@]} )); then
+    echo "${Y}⚠${X} Hace falta ${B}cerrar sesión y volver a entrar${X} por: $(IFS=,; echo "${relogin[*]}" | sed 's/,/, /g')"
+    if (( ask )) && gum confirm "¿Cerrar sesión ahora? (guarda antes lo que tengas abierto)" --affirmative "Cerrar sesión" --negative "Más tarde" --default=false; then
+      uwsm stop
+    else
+      echo "  Cuando quieras: Super+Esc → Cerrar sesión"
+    fi
+  else
+    echo "✔ No hace falta reiniciar ni cerrar sesión."
+  fi
+}
+
 cmd_update() {
   # NANUK_UPDATE_REEXEC: seguro contra bucles. Pase lo que pase, el relanzado
   # tras el pull ocurre UNA sola vez.
@@ -227,6 +304,13 @@ cmd_update() {
     # versión nueva.
     NANUK_UPDATE_REEXEC=1 exec bash "$REPO/bin/nanuk" update --no-pull
   fi
+
+  # Para saber al final qué se actualizó: hasta dónde llega hoy el log de
+  # pacman y qué versión de Nanuk estaba aplicada (antes de que update_packages
+  # la sobreescriba).
+  local log_start from=""
+  log_start="$(wc -l < /var/log/pacman.log 2>/dev/null || echo 0)"
+  [[ -f "$PKG_COMMIT" ]] && from="$(<"$PKG_COMMIT")"
 
   say "actualizando el sistema (pacman)..."
   sudo pacman -Syu --noconfirm
@@ -254,7 +338,8 @@ cmd_update() {
   fi
 
   echo
-  echo "${B}Listo.${X} Si cambió algo del entorno (variables, autostart): cierra sesión y vuelve a entrar."
+  echo "${B}Listo.${X}"
+  check_restart "$log_start" "$from"
 }
 
 cmd_theme() {

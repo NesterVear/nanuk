@@ -27,6 +27,22 @@ n.bind("SUPER + F", "Pantalla completa", dsp.window.fullscreen({ mode = "fullscr
 n.bind("SUPER + ALT + F", "Maximizar (sin tapar la barra)", dsp.window.fullscreen({ mode = "maximized" }))
 n.bind("SUPER + P", "Pseudo-mosaico (tamaño fijo)", dsp.window.pseudo())
 n.bind("SUPER + J", "Cambiar dirección del split", dsp.layout("togglesplit"))
+-- Layout de ESTE workspace: mosaico (dwindle) ↔ columnas que se desplazan
+-- (scrolling). Se guarda y sobrevive a recargas: ver workspace-layouts.lua.
+n.bind("SUPER + L", "Layout del workspace: mosaico ↔ columnas", function()
+  local ws = hl.get_active_workspace()
+  if not ws or ws.special then return end
+  local new = (ws.tiled_layout == "scrolling") and "dwindle" or "scrolling"
+  os.execute("mkdir -p " .. n.shell_quote(n.workspace_layouts_dir))
+  local file = io.open(n.workspace_layouts_dir .. "/" .. tostring(ws.id), "w")
+  if file then
+    file:write(new, "\n")
+    file:close()
+  end
+  n.set_workspace_layout(ws.id, new)
+  local label = (new == "scrolling") and "columnas (scrolling)" or "mosaico (dwindle)"
+  hl.exec_cmd("notify-send -t 1500 'Workspace " .. tostring(ws.id) .. "' " .. n.shell_quote("Layout: " .. label))
+end)
 n.bind("SUPER + O", "Fijar ventana flotante (visible en todos los workspaces)", dsp.window.pin())
 
 -- ── Estilo Windows: minimizar ───────────────────────────────────────

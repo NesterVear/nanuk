@@ -23,7 +23,8 @@
 # ─────────────────────────────────────────────────────────────────────
 set -Eeuo pipefail
 
-NANUK_SRC=/usr/local/share/nanuk        # copia del repo dentro de la ISO
+NANUK_SRC=/usr/local/share/nanuk        # copia del repo dentro de la ISO (plan B)
+NANUK_REPO_URL="${NANUK_REPO_URL:-https://github.com/nestervear/nanuk.git}"   # lo último (plan A)
 MNT=/mnt
 LOG=/tmp/nanuk-install.log
 
@@ -525,7 +526,23 @@ install_nanuk() {
   step "Instalando Nanuk"
   local home="$MNT/home/$USERNAME" dest="/home/$USERNAME/.local/share/nanuk"
   mkdir -p "$home/.local/share"
-  cp -a "$NANUK_SRC" "$MNT$dest"
+  # Nanuk MÁS RECIENTE: con internet se clona main de GitHub, así una ISO de
+  # hace meses instala las listas de paquetes, scripts y config de hoy. Solo si
+  # falla (sin red, GitHub caído) se usa la copia que viaja dentro de la ISO.
+  # (Los paquetes en sí siempre salen de los mirrors en su última versión:
+  # la ISO no lleva paquetes para el sistema instalado, solo sus nombres.)
+  local latest=/tmp/nanuk-latest
+  rm -rf "$latest"
+  if command -v git &>/dev/null \
+     && busy "Descargando la última versión de Nanuk" \
+          timeout 120 git clone --quiet "$NANUK_REPO_URL" "$latest" \
+     && [[ -f "$latest/install/install.sh" ]]; then
+    say "Nanuk: $(git -C "$latest" log -1 --format='%h · %cs · %s')"
+    cp -a "$latest" "$MNT$dest"
+  else
+    warn "no se pudo descargar la última versión: se instala la copia de la ISO"
+    cp -a "$NANUK_SRC" "$MNT$dest"
+  fi
   arch-chroot "$MNT" chown -R "$USERNAME:$USERNAME" "/home/$USERNAME"
   # sudo sin contraseña SOLO mientras se instala Nanuk (se quita al terminar).
   # - "zz": sudo lee /etc/sudoers.d/ en orden y gana la ÚLTIMA regla que

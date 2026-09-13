@@ -11,6 +11,7 @@ require("default.hypr.looknfeel")        -- gaps, bordes, animaciones, layout
 require("default.hypr.input")            -- teclado, ratón, touchpad
 require("default.hypr.monitors")         -- monitores (default: auto)
 require("default.hypr.windows")          -- reglas de ventanas (diálogos, PiP...)
+require("default.hypr.workspace-layouts") -- layout guardado por workspace (SUPER + L)
 require("default.hypr.bindings")         -- atajos de teclado
 require("default.hypr.autostart")        -- waybar, mako, hypridle...
 

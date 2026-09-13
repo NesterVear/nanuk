@@ -48,6 +48,13 @@ hl.config({
     new_status = "master",
   },
 
+  -- Layout "columnas" (SUPER + L por workspace): cada ventana es una columna
+  -- de medio monitor; caben dos y el resto se desplaza de lado. 0.5 y no el
+  -- 0.49 de Omarchy porque aquí no hay huecos entre ventanas.
+  scrolling = {
+    column_width = 0.5,
+  },
+
   misc = {
     -- Negro puro pintado por Hyprland: es el fondo cuando `nanuk bg none`
     -- y lo que se ve detrás si swaybg aún no ha cargado la imagen.

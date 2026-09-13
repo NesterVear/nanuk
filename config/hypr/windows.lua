@@ -30,6 +30,14 @@ n.window({ tag = "terminal" }, { scroll_touchpad = 1.5 })
 -- vuelve a sacar a flotante porque va después.
 n.window("^(([Bb]rave-(browser|origin))|[Cc]hromium|google-chrome|brave-.*|chrome-.*)$", { tag = "+chromium" })
 n.window({ tag = "chromium" }, { tile = true })
+-- ── Workspaces fijos: navegador en el 1, VS Code en el 2 ────────────
+-- Efecto ESTÁTICO: se aplica al abrir (y te lleva a ese workspace); si luego
+-- mueves la ventana, se respeta. Las apps web de Brave (WhatsApp, Tidal…)
+-- tienen su propia clase (brave-<web>__-Default) y se abren donde estés.
+-- El Picture-in-Picture del navegador tampoco: se queda fijo en todos.
+n.window({ class = "^(firefox|[Bb]rave-(browser|origin)|[Cc]hromium|google-chrome)$", title = "negative:(Picture.?in.?[Pp]icture)" }, { workspace = "1" })
+n.window("^([Cc]ode|code-oss|[Cc]ode - OSS|VSCodium|codium)$", { workspace = "2" })
+
 -- El aviso "X está compartiendo tu pantalla" de Chromium no ocupa sitio.
 n.window({ title = ".*(is sharing|está compartiendo).*" }, { workspace = "special:minimized silent" })
 

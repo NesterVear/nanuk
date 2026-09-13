@@ -16,6 +16,7 @@ n.apps = {
   browser = 'gtk-launch "$(xdg-settings get default-web-browser)"',
   files = "nautilus --new-window",
   editor = "kitty nvim",
+  code = "code",                       -- VS Code (visual-studio-code-bin, AUR)
   power_menu = "nanuk-power-menu",
   -- Programas de terminal que se abren como ventana flotante mediana (btop,
   -- nanuk menu, nmtui…). La clase nanuk.tui la reconoce windows.lua. Si
