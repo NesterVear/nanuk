@@ -149,37 +149,77 @@ EOF
 fi
 
 # ── 2b. Keyring sin preguntas repetidas ────────────────────────────
-# gnome-keyring guarda contraseñas de Brave, VS Code, etc. Con autologin
-# nadie teclea contraseña al entrar, así que el keyring "login" queda
-# cerrado y cada app pregunta por él. Solución: pam_gnome_keyring en
-# /etc/pam.d/login. `session ... auto_start` arranca el demonio al entrar y
-# `auth` lo abre con la contraseña que tecleas en hyprlock, porque
-# /etc/pam.d/hyprlock hace `auth include login`. Una sola contraseña para todo.
+# gnome-keyring guarda contraseñas de Brave, VS Code, etc. Dos casos, según
+# haya hyprlock al entrar (n.lock_on_start = "auto", ver config/hypr/helpers.lua):
+#
+#  · / sin cifrar: autologin + hyprlock al momento. pam_gnome_keyring en
+#    /etc/pam.d/login: `auth` abre el keyring "login" con la contraseña que
+#    tecleas en hyprlock (/etc/pam.d/hyprlock hace `auth include login`) y
+#    `session ... auto_start` arranca el demonio. Una contraseña para todo.
+#
+#  · / cifrado (LUKS): la contraseña del disco ya es el inicio de sesión, y el
+#    autologin (`login -f`) no pasa por `auth`: PAM nunca tiene una contraseña
+#    que darle al keyring. Igual que Omarchy: keyring por defecto SIN
+#    contraseña propia (lo protege el cifrado) y SIN pam_gnome_keyring. Si se
+#    quedara, el primer hyprlock (al suspender, por inactividad) crearía un
+#    keyring "login" con tu contraseña; en el siguiente arranque ese keyring
+#    está cerrado y libsecret, que busca en TODOS los keyrings, lo pide en
+#    cuanto una app consulta un secreto.
 PAM_LOGIN=/etc/pam.d/login
-if ! grep -q pam_gnome_keyring "$PAM_LOGIN"; then
-  sudo sed -i '/^auth.*system-local-login/a auth       optional     pam_gnome_keyring.so' "$PAM_LOGIN"
-  echo 'session    optional     pam_gnome_keyring.so auto_start' | sudo tee -a "$PAM_LOGIN" >/dev/null
-  echo "✔ pam_gnome_keyring en $PAM_LOGIN"
+KEYRINGS="$HOME/.local/share/keyrings"
+
+# Nº de secretos de un .keyring cifrado, leyendo solo la cabecera (que va en
+# claro): "GnomeKeyring\n\r\0\n" (16) + versión/cifrado/hash (4) + nombre
+# (u32 largo + bytes) + ctime/mtime (16) + flags/lock_timeout/iteraciones (12)
+# + sal (8) + reservado (16) → num_items, u32 big-endian. -1 si no es de ese tipo.
+keyring_items() {
+  local len
+  [[ "$(head -c 12 "$1")" == GnomeKeyring ]] || { echo -1; return; }
+  len=$(od -An -tu4 --endian=big -j 20 -N 4 "$1" | tr -d ' ')
+  od -An -tu4 --endian=big -j $((76 + len)) -N 4 "$1" | tr -d ' '
+}
+
+if lsblk -snlo FSTYPE "$(findmnt -nvo SOURCE /)" 2>/dev/null | grep -qx crypto_LUKS; then
+  if grep -q pam_gnome_keyring "$PAM_LOGIN"; then
+    sudo sed -i '/pam_gnome_keyring/d' "$PAM_LOGIN"
+    echo "✔ pam_gnome_keyring quitado de $PAM_LOGIN (disco cifrado)"
+  fi
+
+  # Keyring por defecto sin contraseña, solo si no hay ya uno por defecto.
+  install -d -m 700 "$KEYRINGS"
+  if [[ ! -f "$KEYRINGS/default" ]]; then
+    if [[ ! -f "$KEYRINGS/Default_keyring.keyring" ]]; then
+      printf '[keyring]\ndisplay-name=Default keyring\nctime=0\nmtime=0\nlock-on-idle=false\nlock-after=false\n' \
+        > "$KEYRINGS/Default_keyring.keyring"
+      chmod 600 "$KEYRINGS/Default_keyring.keyring"
+    fi
+    echo Default_keyring > "$KEYRINGS/default"
+    echo "✔ keyring sin contraseña propia (disco cifrado)"
+  fi
+
+  # Un "login" VACÍO que dejó un hyprlock anterior solo sirve para pedir
+  # contraseña: se aparta (.bak). Si guarda secretos no se toca, solo se avisa.
+  if [[ -f "$KEYRINGS/login.keyring" ]]; then
+    items=$(keyring_items "$KEYRINGS/login.keyring")
+    if [[ "$items" == 0 ]]; then
+      mv "$KEYRINGS/login.keyring" "$KEYRINGS/login.keyring.bak"
+      echo "✔ keyring \"login\" vacío apartado (login.keyring.bak): cierra sesión para que deje de preguntar"
+    elif [[ "$items" != -1 ]]; then
+      echo "⚠ tu keyring \"login\" tiene contraseña y $items secreto(s): se pedirá al abrirlo."
+      echo "  Para no verlo más: seahorse → Inicio de sesión → Cambiar contraseña → dejarla vacía."
+    fi
+  fi
+else
+  if ! grep -q pam_gnome_keyring "$PAM_LOGIN"; then
+    sudo sed -i '/^auth.*system-local-login/a auth       optional     pam_gnome_keyring.so' "$PAM_LOGIN"
+    echo 'session    optional     pam_gnome_keyring.so auto_start' | sudo tee -a "$PAM_LOGIN" >/dev/null
+    echo "✔ pam_gnome_keyring en $PAM_LOGIN"
+  fi
 fi
+
 if [[ ! -f /etc/pam.d/hyprlock ]]; then
   printf 'auth include login\naccount include login\n' | sudo tee /etc/pam.d/hyprlock >/dev/null
   echo "✔ /etc/pam.d/hyprlock creado"
-fi
-
-# Con / cifrado (LUKS) no hay hyprlock al entrar (n.lock_on_start = "auto":
-# la contraseña del disco ya es el inicio de sesión), así que nadie abriría
-# el keyring "login" y cada app lo pediría. En ese caso, igual que Omarchy,
-# el keyring por defecto va sin contraseña propia: lo protege el cifrado del
-# disco. Solo si aún no tienes ningún keyring (nunca se toca uno existente).
-KEYRINGS="$HOME/.local/share/keyrings"
-if lsblk -snlo FSTYPE "$(findmnt -nvo SOURCE /)" 2>/dev/null | grep -qx crypto_LUKS \
-   && ! compgen -G "$KEYRINGS/*.keyring" >/dev/null; then
-  install -d -m 700 "$KEYRINGS"
-  printf '[keyring]\ndisplay-name=Default keyring\nctime=0\nmtime=0\nlock-on-idle=false\nlock-after=false\n' \
-    > "$KEYRINGS/Default_keyring.keyring"
-  chmod 600 "$KEYRINGS/Default_keyring.keyring"
-  echo Default_keyring > "$KEYRINGS/default"
-  echo "✔ keyring sin contraseña propia (disco cifrado)"
 fi
 
 # ── 3. Apps por defecto ─────────────────────────────────────────────

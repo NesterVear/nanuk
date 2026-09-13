@@ -201,9 +201,12 @@ sesión, sin display manager. Esa misma contraseña abre el keyring de GNOME
 
 **Con el disco cifrado (LUKS)** la contraseña ya la tecleas en el arranque,
 en la pantalla de Nanuk, así que hyprlock no vuelve a salir: entras directo al
-escritorio. El instalador crea en ese caso un keyring sin contraseña propia
-(lo protege el cifrado del disco, como en Omarchy). Si ya tenías un keyring
-con contraseña, las apps la pedirán una vez al abrirlo.
+escritorio. Como nadie le da una contraseña al keyring, el instalador lo deja
+sin contraseña propia (lo protege el cifrado del disco, como en Omarchy) y no
+activa `pam_gnome_keyring`; si encuentra un keyring "login" vacío de antes, lo
+aparta como `login.keyring.bak`. Si tu keyring "login" sí guarda secretos y
+tiene contraseña, se pedirá al abrirlo: en `seahorse` → *Inicio de sesión* →
+*Cambiar contraseña*, déjala vacía y no vuelve a salir.
 
 Para cambiarlo, en `~/.config/nanuk/user/hypr/autostart.lua`:
 `n.lock_on_start = false` (nunca bloquear al entrar) o `true` (siempre, aunque

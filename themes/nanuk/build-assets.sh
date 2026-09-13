@@ -30,6 +30,8 @@ fi
 # (wordmark.png, que hyprlock lee de ~/.config/nanuk/theme/). Se renderiza
 # grande (1400 px): Plymouth la escala a ~62% del ancho de la pantalla y
 # hyprlock a 850 px (config/hypr/hyprlock.conf), así se ve rotunda en ambos.
+# Primero, el oso pixel art: build-wordmark-bear.py lo reescribe en el SVG.
+python3 "$HERE/build-wordmark-bear.py" >/dev/null
 rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$HERE/wordmark.png"
 rsvg-convert -w 1400 "$HERE/wordmark.svg" -o "$PLY/logo.png"
 

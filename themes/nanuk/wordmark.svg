@@ -2,9 +2,11 @@
 <!--
   Nanuk — wordmark. Blanco, grande, con seguridad. Una sola línea de hielo
   (#9fd8ff) debajo: el horizonte del ártico. Y sobre el horizonte, pequeño,
-  el guiño: un oso polar caminando (Nanuk = "oso polar" en inuit).
+  el guiño: un oso polar en pixel art caminando (Nanuk = "oso polar" en inuit).
   Fuente: iA Writer Quattro S Bold (debe estar instalada al renderizar; ver
   build-assets.sh). La misma imagen sirve para el splash y para hyprlock.
+  El oso NO se edita aquí: lo escribe build-wordmark-bear.py entre los
+  comentarios oso:inicio y oso:fin.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="380" viewBox="0 0 1400 380">
   <text x="700" y="248"
@@ -15,17 +17,14 @@
         letter-spacing="40"
         fill="#ffffff">NANUK</text>
   <rect x="330" y="300" width="740" height="8" fill="#9fd8ff"/>
-  <!-- Oso polar: silueta de 160x80 escalada a 0.6 (96x48), con las patas
-       apoyadas en el borde superior de la línea de hielo, al extremo derecho. -->
-  <g transform="translate(972 253.2) scale(0.6)">
-    <g fill="#ffffff">
-      <path d="M 36 62 C 22 54, 24 30, 50 26 C 66 22, 90 20, 104 22 C 114 24, 126 32, 136 40 C 144 37, 154 42, 158 50 C 160 55, 157 59, 151 59 L 140 58 C 134 57, 128 52, 124 46 C 121 50, 118 54, 116 62 Z"/>
-      <circle cx="137" cy="40" r="3.5"/>
-      <rect x="40" y="56" width="12" height="22" rx="5"/>
-      <rect x="57" y="58" width="11" height="20" rx="5"/>
-      <rect x="96" y="58" width="11" height="20" rx="5"/>
-      <rect x="108" y="56" width="12" height="22" rx="5"/>
-    </g>
-    <circle cx="147" cy="48" r="2" fill="#000000"/>
+  <!-- oso:inicio -->
+  <g transform="translate(950 249) scale(3)" shape-rendering="crispEdges">
+    <path fill="#ffffff" d="M6 0h7v1h-7zM4 1h14v1h-14zM3 2h19v1h-19zM2 3h23v1h-23zM1 4h27v1h-27zM32 4h1v1h-1zM2 5h33v1h-33zM2 6h31v1h-31zM34 6h3v1h-3zM2 7h8v1h-8zM11 7h10v1h-10zM22 7h17v1h-17zM2 8h7v1h-7zM10 8h12v1h-12zM23 8h8v1h-8zM2 9h6v1h-6zM9 9h14v1h-14zM24 9h4v1h-4zM2 10h1v1h-1zM27 10h1v1h-1zM3 11h5v1h-5zM24 11h4v1h-4zM2 12h5v1h-5zM25 12h4v1h-4zM2 13h4v1h-4zM25 13h4v1h-4zM1 14h4v1h-4zM26 14h4v1h-4zM1 15h4v1h-4zM26 15h4v1h-4z"/>
+    <path fill="#d6e2ea" d="M31 4h1v1h-1zM1 5h1v1h-1zM1 6h1v1h-1zM1 7h1v1h-1zM10 7h1v1h-1zM21 7h1v1h-1zM1 8h1v1h-1zM9 8h1v1h-1zM22 8h1v1h-1zM31 8h4v1h-4zM1 9h1v1h-1zM8 9h1v1h-1zM23 9h1v1h-1zM3 10h24v1h-24zM2 11h1v1h-1zM23 11h1v1h-1zM1 12h1v1h-1zM24 12h1v1h-1zM1 13h1v1h-1zM24 13h1v1h-1zM0 14h1v1h-1zM25 14h1v1h-1zM0 15h1v1h-1zM25 15h1v1h-1z"/>
+    <path fill="#a3b3bf" d="M35 8h3v1h-3zM28 9h3v1h-3zM9 11h13v1h-13zM0 16h6v1h-6zM25 16h7v1h-7z"/>
+    <path fill="#7b8894" d="M10 12h4v1h-4zM19 12h4v1h-4zM10 13h4v1h-4zM18 13h4v1h-4zM10 14h4v1h-4zM18 14h4v1h-4zM10 15h4v1h-4zM17 15h4v1h-4zM10 16h5v1h-5zM16 16h5v1h-5z"/>
+    <path fill="#2b3137" d="M39 7h1v1h-1z"/>
+    <path fill="#000000" d="M33 6h1v1h-1z"/>
   </g>
+  <!-- oso:fin -->
 </svg>
