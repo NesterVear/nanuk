@@ -177,23 +177,7 @@ for d in firefox.desktop brave-origin.desktop brave-browser.desktop chromium.des
 done
 xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
 
-# ── 4. Apariencia GTK vía gsettings ────────────────────────────────
-# Las apps de libadwaita (Nautilus, diálogos de archivo, evince…) NO leen
-# settings.ini en Wayland: toman modo oscuro, iconos, cursor y fuente de
-# gsettings a través del portal (xdg-desktop-portal-gtk). Sin esto quedan en
-# modo claro y nuestro gtk.css negro deja el texto negro sobre negro: por eso
-# "no se veían las carpetas" en Nautilus. Es por usuario; no necesita sudo.
-if command -v gsettings &>/dev/null; then
-  gsettings set org.gnome.desktop.interface color-scheme  'prefer-dark'
-  gsettings set org.gnome.desktop.interface gtk-theme     'Adwaita-dark'
-  gsettings set org.gnome.desktop.interface icon-theme    'Tela-circle-grey-dark'
-  gsettings set org.gnome.desktop.interface cursor-theme  'Adwaita'
-  gsettings set org.gnome.desktop.interface cursor-size   24
-  gsettings set org.gnome.desktop.interface font-name     'Noto Sans 10'
-  gsettings set org.gnome.desktop.interface monospace-font-name 'CaskaydiaMono Nerd Font 10'
-  echo "✔ gsettings: oscuro, Tela-circle-grey-dark, cursor Adwaita, Noto Sans"
-else
-  echo "⚠ sin gsettings (glib2): las apps GTK4 pueden quedar en modo claro"
-fi
+# (La apariencia GTK vía gsettings se aplica en 06-dotfiles.sh, para que
+# `nanuk update` la reaplique.)
 
 echo "✔ Escritorio (sistema) configurado"

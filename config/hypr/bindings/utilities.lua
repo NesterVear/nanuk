@@ -12,8 +12,10 @@ n.bind("PRINT", "Captura de región", "hyprshot -m region")
 n.bind("SHIFT + PRINT", "Captura de pantalla completa", "hyprshot -m output")
 n.bind("SUPER + PRINT", "Selector de color", "pkill hyprpicker || hyprpicker -a")
 
--- Portapapeles con historial (cliphist), elegido con wofi.
-n.bind("SUPER + CTRL + V", "Historial del portapapeles", "cliphist list | wofi --dmenu | cliphist decode | wl-copy")
+-- Portapapeles con historial (cliphist), elegido con fuzzel. cliphist da
+-- "id<TAB>texto": se muestra solo el texto y fuzzel devuelve la línea entera.
+n.bind("SUPER + CTRL + V", "Historial del portapapeles",
+  "cliphist list | fuzzel --dmenu --with-nth 2 --prompt 'portapapeles ❯ ' | cliphist decode | wl-copy")
 
 -- Notificaciones (mako).
 n.bind("SUPER + comma", "Cerrar última notificación", "makoctl dismiss")

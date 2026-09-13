@@ -18,7 +18,8 @@
 #
 # Sin magia: cada bloque es lo que harías a mano siguiendo la wiki de Arch.
 # Con NANUK_DRY=1 se detiene antes de tocar ningún disco (para probar las
-# preguntas). El log completo queda en /var/log/nanuk-install.log del sistema.
+# preguntas). En pantalla solo el progreso; la salida de pacstrap, mkinitcpio
+# y pacman va al log: /var/log/nanuk-install.log del sistema instalado.
 # ─────────────────────────────────────────────────────────────────────
 set -Eeuo pipefail
 
@@ -35,15 +36,39 @@ export GUM_CHOOSE_CURSOR_FOREGROUND="$ICE" GUM_CHOOSE_HEADER_FOREGROUND="$GRAY" 
        GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e" GUM_FILTER_INDICATOR_FOREGROUND="$ICE" \
        GUM_FILTER_MATCH_FOREGROUND="$ICE" GUM_FILTER_HEADER_FOREGROUND="$GRAY"
 
-step() { echo; gum style --foreground "$ICE" --bold "━━ $* ━━"; }
-say()  { echo "  ▶ $*"; }
-warn() { echo "  ⚠ $*" >&2; }
-die()  { echo; gum style --foreground "$ICE" --bold "✖ $*"; echo; EXPLAINED=1; exit 1; }
+# Pantalla y log. Desde prepare_disks la salida normal va SOLO al log (ver
+# main): pacstrap, mkinitcpio y pacman no ensucian la pantalla. Lo que sí debe
+# verse se escribe en el fd 3, que es la terminal desde el principio.
+exec 3>&1
+show() { tee -a "$LOG" >&3; }
+step() { echo "━━ $* ━━" >> "$LOG"; { echo; gum style --foreground "$ICE" --bold "━━ $* ━━"; } >&3; }
+say()  { echo "  ▶ $*" | show; }
+warn() { echo "  ⚠ $*" | show; }
+die()  { echo "✖ $*" >> "$LOG"; { echo; gum style --foreground "$ICE" --bold "✖ $*"; echo; } >&3; EXPLAINED=1; exit 1; }
+
+# busy <texto> <comando...>: el comando corre con su salida al log y en
+# pantalla queda una línea que gira con el tiempo que lleva. ASCII: la consola
+# de la ISO no tiene fuente para braille.
+busy() {
+  local label="$1"; shift
+  local start=$SECONDS i=0 rc=0 frames=('-' '\' '|' '/')
+  "$@" >> "$LOG" 2>&1 < /dev/null &
+  local pid=$!
+  while kill -0 "$pid" 2>/dev/null; do
+    local s=$(( SECONDS - start ))
+    printf '\r  %s %s  %d:%02d ' "${frames[i++ % 4]}" "$label" $(( s / 60 )) $(( s % 60 )) >&3
+    sleep 0.25
+  done
+  wait "$pid" || rc=$?
+  printf '\r\033[K' >&3
+  if (( rc == 0 )); then echo "  ✔ $label" | show; else echo "  ✖ $label" | show; fi
+  return "$rc"
+}
 # Cualquier salida con error que no haya pasado por die() o por el trap ERR
 # (p. ej. un `set -e` en la fase de preguntas) al menos dice dónde fue.
 EXPLAINED=0
 # shellcheck disable=SC2154  # rc se asigna dentro del propio trap
-trap 'rc=$?; (( rc == 0 || EXPLAINED )) || echo "✖ nanuk-install terminó con código $rc en la línea $LINENO. Log: $LOG" >&2' EXIT
+trap 'rc=$?; (( rc == 0 || EXPLAINED )) || echo "✖ nanuk-install terminó con código $rc en la línea $LINENO. Log: $LOG" >&3' EXIT
 ask()      { gum input --header "$1" "${@:2}"; }
 choose()   { gum choose --header "$1" "${@:2}"; }
 confirm()  { gum confirm "$1" "${@:2}"; }
@@ -54,16 +79,16 @@ on_error() {
   local line="$1" cmd="$2"
   # shellcheck disable=SC2034  # lo lee el trap EXIT
   EXPLAINED=1
-  { echo; echo "✖ nanuk-install se detuvo en la línea $line:"; echo "    $cmd"; } >&2
+  { echo; echo "✖ nanuk-install se detuvo en la línea $line:"; echo "    $cmd"; } >&3
   if mountpoint -q "$MNT" 2>/dev/null; then
     mkdir -p "$MNT/var/log" && cp "$LOG" "$MNT/var/log/nanuk-install.log" 2>/dev/null || true
-    echo "  El disco sigue montado en $MNT. Log: $LOG (copiado a $MNT/var/log/nanuk-install.log)" >&2
+    echo "  El disco sigue montado en $MNT. Log: $LOG (copiado a $MNT/var/log/nanuk-install.log)" >&3
   else
-    echo "  Log: $LOG" >&2
+    echo "  Log: $LOG" >&3
   fi
-  echo "  Últimas líneas del log:" >&2
-  tail -n 15 "$LOG" 2>/dev/null | sed 's/^/    /' >&2
-  echo "  Arregla la causa y vuelve a lanzar: nanuk-install" >&2
+  echo "  Últimas líneas del log:" >&3
+  tail -n 15 "$LOG" 2>/dev/null | sed 's/^/    /' >&3
+  echo "  Arregla la causa y vuelve a lanzar: nanuk-install" >&3
 }
 
 banner() {
@@ -350,8 +375,8 @@ prepare_disks() {
 # ── 5. Sistema base ─────────────────────────────────────────────────
 install_base() {
   step "Sistema base (pacstrap)"
-  say "eligiendo mirrors rápidos (reflector, ~1 min)"
-  timeout 180 reflector --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist \
+  busy "Eligiendo mirrors rápidos" \
+    timeout 180 reflector --protocol https --latest 20 --sort rate --save /etc/pacman.d/mirrorlist \
     || warn "reflector falló; se usa la lista que trae la ISO"
 
   local ucode=""
@@ -366,7 +391,7 @@ install_base() {
   [[ -n "$ucode" ]] && pkgs+=("$ucode")
   [[ "$FS" == btrfs ]] && pkgs+=(btrfs-progs)
   (( ENCRYPT || HOME_LUKS )) && pkgs+=(cryptsetup)
-  pacstrap -K "$MNT" "${pkgs[@]}"
+  busy "Descargando e instalando el sistema base" pacstrap -K "$MNT" "${pkgs[@]}"
   genfstab -U "$MNT" >> "$MNT/etc/fstab"
   say "base instalada, fstab por UUID"
 }
@@ -459,6 +484,10 @@ Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI
 EOH
 efibootmgr --create --disk "$efi_disk" --part "$efi_num" --label "Nanuk" \
   --loader '\EFI\BOOT\BOOTX64.EFI' >/dev/null 2>&1 || echo "  (sin entrada NVRAM; el firmware usará EFI/BOOT/BOOTX64.EFI igualmente)"
+# BootNext: el PRÓXIMO arranque va al disco aunque la USB siga conectada y
+# esté primera en el orden. Así el reinicio automático no vuelve al instalador.
+bootnum="$(efibootmgr 2>/dev/null | awk '/^Boot[0-9A-Fa-f]{4}\*? Nanuk/ { print substr($1, 5, 4); exit }')"
+[[ -n "$bootnum" ]] && efibootmgr --bootnext "$bootnum" >/dev/null 2>&1 || true
 
 # initramfs con systemd + UKI (kernel + initramfs + cmdline en un solo .efi).
 # El hook plymouth lo añade después 05-desktop.sh. Necesita objcopy (binutils).
@@ -480,7 +509,7 @@ if [[ "${HOME_LUKS:-0}" == 1 && -n "${HOME_UUID:-}" ]]; then
   echo "crypthome UUID=$HOME_UUID none luks" >> /etc/crypttab
 fi
 CHROOT
-  arch-chroot "$MNT" bash /root/nanuk-configure.sh
+  busy "Idioma, usuario y arranque (Limine + UKI)" arch-chroot "$MNT" bash /root/nanuk-configure.sh
   rm -f "$MNT/root/nanuk-configure.sh"
 
   # Comprobar que lo que arranca existe de verdad antes de seguir.
@@ -493,25 +522,95 @@ CHROOT
 
 # ── 6. Nanuk propiamente dicho ──────────────────────────────────────
 install_nanuk() {
-  step "Instalando Nanuk (install/install.sh, pasos 01-07)"
+  step "Instalando Nanuk"
   local home="$MNT/home/$USERNAME" dest="/home/$USERNAME/.local/share/nanuk"
   mkdir -p "$home/.local/share"
   cp -a "$NANUK_SRC" "$MNT$dest"
   arch-chroot "$MNT" chown -R "$USERNAME:$USERNAME" "/home/$USERNAME"
-  # sudo sin contraseña SOLO durante la instalación (se quita al final).
-  # sudo lee /etc/sudoers.d/ en orden alfabético y gana la ÚLTIMA regla que
-  # coincide: el nombre empieza por "zz" para ir después de "wheel".
-  echo "$USERNAME ALL=(ALL) NOPASSWD: ALL" > "$MNT/etc/sudoers.d/zz-nanuk-install"
+  # sudo sin contraseña SOLO mientras se instala Nanuk (se quita al terminar).
+  # - "zz": sudo lee /etc/sudoers.d/ en orden y gana la ÚLTIMA regla que
+  #   coincide, así que va después de "wheel".
+  # - verifypw=any: `sudo -v` (install.sh, yay) por defecto usa verifypw=all y
+  #   pide contraseña si CUALQUIER regla del usuario la pide (la de wheel).
+  # - !lecture: sin la "charla habitual del administrador" en mitad del log.
+  cat > "$MNT/etc/sudoers.d/zz-nanuk-install" <<EOS
+Defaults:$USERNAME verifypw=any, !lecture
+$USERNAME ALL=(ALL) NOPASSWD: ALL
+EOS
   chmod 440 "$MNT/etc/sudoers.d/zz-nanuk-install"
+  arch-chroot "$MNT" visudo -cq -f /etc/sudoers.d/zz-nanuk-install \
+    || die "la regla temporal de sudo no es válida (visudo)"
 
   INSTALL_OK=0
-  if arch-chroot "$MNT" runuser -l "$USERNAME" -c "bash $dest/install/install.sh"; then
+  # install.sh escribe su propio progreso (una línea por paso) en la terminal
+  # (fd 3) y el detalle en ~/.local/state/nanuk/install.log, que después se
+  # añade a este log.
+  if arch-chroot "$MNT" runuser -l "$USERNAME" -c "bash $dest/install/install.sh" >&3 2>> "$LOG"; then
     INSTALL_OK=1
+    rm -f "$MNT/etc/sudoers.d/zz-nanuk-install"
   else
-    warn "install.sh terminó con errores. El sistema base arranca igual; dentro, repite:"
-    warn "  bash ~/.local/share/nanuk/install/install.sh"
+    warn "install.sh terminó con errores: se continuará SOLO en el primer arranque."
+    schedule_resume
   fi
-  rm -f "$MNT/etc/sudoers.d/zz-nanuk-install"
+  cat "$home/.local/state/nanuk/install.log" >> "$LOG" 2>/dev/null || true
+}
+
+# Si los pasos 01-07 fallan dentro del chroot (red, AUR, un mirror caído…),
+# no se deja al usuario con una consola y un comando que teclear: al arrancar
+# el sistema nuevo, autologin en tty1 → install.sh otra vez, con red real y
+# terminal real → reinicio automático al terminar. La regla temporal de sudo
+# se mantiene hasta entonces y la borra el propio bloque al acabar bien.
+schedule_resume() {
+  local home="$MNT/home/$USERNAME"
+  mkdir -p "$home/.local/state/nanuk"
+  : > "$home/.local/state/nanuk/install-pending"
+
+  # Autologin en tty1 (05-desktop.sh escribe el mismo archivo si llega a correr).
+  mkdir -p "$MNT/etc/systemd/system/getty@tty1.service.d"
+  cat > "$MNT/etc/systemd/system/getty@tty1.service.d/autologin.conf" <<EOG
+[Service]
+ExecStart=
+ExecStart=-/usr/bin/agetty --autologin $USERNAME --noclear %I \$TERM
+EOG
+
+  # Bloque al PRINCIPIO de ~/.bash_profile: tiene que correr antes que el
+  # arranque de Hyprland que añade 05-desktop.sh.
+  local profile="$home/.bash_profile" tmp
+  tmp="$(mktemp)"
+  cat > "$tmp" <<'EOR'
+# >>> nanuk-resume >>>
+# Añadido por nanuk-install: termina la instalación que quedó a medias y se
+# borra solo al acabar bien.
+if [[ "$(tty)" == /dev/tty1 && -f ~/.local/state/nanuk/install-pending ]]; then
+  echo "Nanuk: continuando la instalación…"
+  until curl -sfI --max-time 8 https://archlinux.org >/dev/null; do
+    echo "Sin internet. Elige una red (Esc para reintentar):"; sleep 2
+    nmtui-connect || true
+  done
+  if bash ~/.local/share/nanuk/install/install.sh; then
+    rm -f ~/.local/state/nanuk/install-pending
+    sed -i '/^# >>> nanuk-resume >>>$/,/^# <<< nanuk-resume <<<$/d' ~/.bash_profile
+    sudo rm -f /etc/sudoers.d/zz-nanuk-install
+    echo "✔ Nanuk instalado. Reiniciando en 5 s…"; sleep 5
+    sudo systemctl reboot
+    # `systemctl reboot` solo ENCOLA el reinicio y vuelve al instante. Sin
+    # este return, bash seguía leyendo el perfil, llegaba al bloque que
+    # arranca Hyprland y salía una pantalla de bloqueo de más antes de
+    # reiniciar (y otra después).
+    return 0
+  else
+    echo "✖ La instalación volvió a fallar (mira el mensaje de arriba)."
+    echo "  Reintentar: bash ~/.local/share/nanuk/install/install.sh"
+    # Quedarse en la consola: con Nanuk a medias no se arranca Hyprland.
+    return 0
+  fi
+fi
+# <<< nanuk-resume <<<
+EOR
+  [[ -f "$profile" ]] || printf '[[ -f ~/.bashrc ]] && . ~/.bashrc\n' > "$profile"
+  cat "$profile" >> "$tmp" && mv "$tmp" "$profile"
+  arch-chroot "$MNT" chown -R "$USERNAME:$USERNAME" "/home/$USERNAME/.bash_profile" "/home/$USERNAME/.local"
+  say "continuación programada para el primer arranque (tty1)"
 }
 
 finish() {
@@ -523,18 +622,30 @@ finish() {
   [[ -n "$SWAP_PART" ]] && swapoff "$SWAP_PART" 2>/dev/null || true
   cryptsetup close crypthome 2>/dev/null || true
   cryptsetup close cryptroot 2>/dev/null || true
-  echo
-  if (( INSTALL_OK )); then
-    gum style --foreground "$ICE" --bold "✔ Nanuk instalado."
-    echo "  Saca la USB y reinicia: splash del oso → autologin → Hyprland."
-  else
-    gum style --foreground "$ICE" --bold "Sistema base instalado; Nanuk quedó a medias."
-    echo "  Reinicia, entra como $USERNAME y ejecuta: bash ~/.local/share/nanuk/install/install.sh"
-  fi
-  echo "  Log: /var/log/nanuk-install.log"
-  echo
-  # La salida está redirigida al log desde prepare_disks: gum vuelve a la tty.
-  if gum confirm "¿Reiniciar ahora?" </dev/tty >/dev/tty 2>&1; then reboot; fi
+  {
+    echo
+    if (( INSTALL_OK )); then
+      gum style --foreground "$ICE" --bold "✔ Nanuk instalado."
+      echo "  Al reiniciar: splash del oso → pantalla de bloqueo → Hyprland."
+    else
+      gum style --foreground "$ICE" --bold "Sistema base instalado. Nanuk se terminará de instalar solo al arrancar."
+      echo "  No hay que hacer nada: entra solo, continúa y vuelve a reiniciar."
+    fi
+    echo "  Log: /var/log/nanuk-install.log"
+    echo
+  } >&3
+  # Reinicio automático. Cualquier tecla lo cancela y deja la consola de la ISO.
+  # (La salida está redirigida al log desde prepare_disks: se lee de la tty.)
+  local s
+  for s in 10 9 8 7 6 5 4 3 2 1; do
+    printf '\r  Reiniciando en %2d s. Pulsa una tecla para quedarte en la consola. ' "$s" >/dev/tty
+    if read -r -s -n 1 -t 1 </dev/tty; then
+      printf '\n  Reinicio cancelado. Cuando quieras: reboot\n' >/dev/tty
+      return 0
+    fi
+  done
+  printf '\n' >/dev/tty
+  reboot
 }
 
 # ── main ────────────────────────────────────────────────────────────
@@ -543,8 +654,9 @@ preflight
 questions
 storage
 summary
-# A partir de aquí todo queda en el log (las preguntas ya terminaron).
-exec > >(tee -a "$LOG") 2>&1
+# A partir de aquí la salida de los comandos va solo al log (las preguntas ya
+# terminaron). En pantalla: step/say/warn y las líneas de busy, por el fd 3.
+exec >> "$LOG" 2>&1
 trap 'on_error "$LINENO" "$BASH_COMMAND"' ERR
 prepare_disks
 install_base

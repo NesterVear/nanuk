@@ -10,7 +10,7 @@
 #
 # Después, cada app se conecta a esas capas:
 #   - Hyprland: ~/.config/hypr/hyprland.lua carga default → theme → user.
-#   - Apps sin include (waybar, kitty, mako, wofi, gtk): symlink a
+#   - Apps sin include (waybar, kitty, mako, fuzzel, gtk): symlink a
 #     user/<app> si existe, si no a default/<app>. Para personalizar una app
 #     entera: cp -r default/waybar user/waybar, edita, y re-ejecuta este paso.
 # ─────────────────────────────────────────────────────────────────────
@@ -59,6 +59,67 @@ if [[ ! -L "$NANUK_CFG/user/background" ]]; then
   echo "✔ fondo de pantalla: 1.jpg del tema (cámbialo con: nanuk bg)"
 fi
 
+# ── 3c. Tema de iconos "Nanuk": monocromo ──────────────────────────
+# Un tema mínimo con SOLO los iconos simbólicos de Adwaita (línea, sin color)
+# y que NO hereda los de color. Cuando una app pide "folder", no lo encuentra
+# y GTK usa su alternativa "folder-symbolic", que tiñe con el color del
+# texto: gris sobre negro, igual en carpetas, archivos, dispositivos y
+# botones. Los iconos de las propias apps (Firefox…) siguen viniendo de
+# hicolor. No se copia nada: symbolic/ es un enlace al de adwaita-icon-theme
+# (se actualiza con pacman) e index.theme se regenera por si Adwaita añade
+# carpetas.
+ICONS_DIR="$HOME/.local/share/icons/Nanuk"
+ADWAITA_SYMBOLIC=/usr/share/icons/Adwaita/symbolic
+if [[ -d "$ADWAITA_SYMBOLIC" ]]; then
+  mkdir -p "$ICONS_DIR"
+  ln -sfn "$ADWAITA_SYMBOLIC" "$ICONS_DIR/symbolic"
+  icon_dirs=()
+  for d in "$ADWAITA_SYMBOLIC"/*/; do icon_dirs+=("symbolic/$(basename "$d")"); done
+  {
+    printf '[Icon Theme]\nName=Nanuk\nComment=Simbólicos de Adwaita, monocromos (generado por 06-dotfiles.sh)\n'
+    printf 'Inherits=hicolor\nDirectories=%s\n' "$(IFS=,; echo "${icon_dirs[*]}")"
+    for d in "${icon_dirs[@]}"; do
+      printf '\n[%s]\nSize=16\nMinSize=8\nMaxSize=512\nType=Scalable\n' "$d"
+    done
+  } > "$ICONS_DIR/index.theme"
+  echo "✔ iconos: tema Nanuk (simbólicos de Adwaita)"
+else
+  echo "⚠ falta adwaita-icon-theme: no se crea el tema de iconos Nanuk"
+fi
+
+# ── 3d. Apariencia GTK vía gsettings ────────────────────────────────
+# Las apps de libadwaita (Nautilus, diálogos de archivo, evince…) NO leen
+# settings.ini en Wayland: toman modo oscuro, iconos, cursor y fuente de
+# gsettings a través del portal (xdg-desktop-portal-gtk). Sin esto quedan en
+# modo claro y nuestro gtk.css negro deja el texto negro sobre negro: por eso
+# "no se veían las carpetas" en Nautilus. Es por usuario; no necesita sudo.
+# Va en este paso (antes estaba en el 05) para que `nanuk update` la
+# reaplique. En el chroot de la ISO no hay bus de sesión: gsettings guardaría
+# en memoria y se perdería. dbus-run-session abre un bus temporal y dconf lo
+# escribe en ~/.config/dconf/user.
+apply_gsettings() {
+  local i=org.gnome.desktop.interface
+  gsettings set "$i" color-scheme        'prefer-dark'
+  gsettings set "$i" gtk-theme           'Adwaita-dark'
+  gsettings set "$i" icon-theme          'Nanuk'      # sección 3c
+  gsettings set "$i" cursor-theme        'Adwaita'
+  gsettings set "$i" cursor-size         24
+  gsettings set "$i" font-name           'Noto Sans 10'
+  gsettings set "$i" monospace-font-name 'CaskaydiaMono Nerd Font 10'
+}
+if ! command -v gsettings &>/dev/null; then
+  echo "⚠ sin gsettings (glib2): las apps GTK4 pueden quedar en modo claro"
+elif [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+  apply_gsettings && echo "✔ gsettings: oscuro, iconos Nanuk, cursor Adwaita, Noto Sans"
+else
+  export -f apply_gsettings
+  if dbus-run-session -- bash -c apply_gsettings; then
+    echo "✔ gsettings (bus temporal): oscuro, iconos Nanuk, cursor Adwaita, Noto Sans"
+  else
+    echo "⚠ no se pudo aplicar gsettings sin sesión gráfica; se aplica con: nanuk update"
+  fi
+fi
+
 # ── 4. Enlaces por app (precedencia user > default) ────────────────
 # link_layered <destino> <ruta-relativa>
 #   Enlaza <destino> a user/<ruta> si existe, si no a default/<ruta>.
@@ -81,7 +142,11 @@ link_layered() {
 link_layered "$HOME/.config/waybar"              waybar
 link_layered "$HOME/.config/kitty"               kitty
 link_layered "$HOME/.config/mako"                mako
-link_layered "$HOME/.config/wofi"                wofi
+link_layered "$HOME/.config/fuzzel"              fuzzel
+# wofi se cambió por fuzzel (2026-09-12): fuera el enlace viejo si era nuestro.
+if [[ -L "$HOME/.config/wofi" && "$(readlink "$HOME/.config/wofi")" == "$NANUK_CFG/"* ]]; then
+  rm "$HOME/.config/wofi"
+fi
 link_layered "$HOME/.config/hypr/hyprlock.conf"  hypr/hyprlock.conf
 link_layered "$HOME/.config/hypr/hypridle.conf"  hypr/hypridle.conf
 link_layered "$HOME/.config/gtk-3.0/settings.ini" gtk-3.0/settings.ini
@@ -141,7 +206,7 @@ echo "✔ apps web enlazadas en $APPS_DIR"
 
 # ── 6c. Ocultar del launcher entradas que no son apps (hidden-apps.txt) ──
 # Un .desktop local con el mismo nombre que uno del sistema lo sustituye;
-# con NoDisplay=true, wofi y el resto de launchers dejan de listarlo.
+# con NoDisplay=true, fuzzel y el resto de launchers dejan de listarlo.
 for list in "$NANUK_CFG/default/hidden-apps.txt" "$NANUK_CFG/user/hidden-apps.txt"; do
   [[ -f "$list" ]] || continue
   while IFS= read -r id; do

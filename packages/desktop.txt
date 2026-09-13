@@ -9,7 +9,7 @@ hyprpolkitagent
 
 # Barra, launcher, notificaciones, lock
 waybar
-wofi
+fuzzel
 mako
 hyprlock
 hypridle
@@ -64,9 +64,8 @@ vlc
 # Toolkits y temas (Wayland para Qt, tema oscuro GTK)
 qt5-wayland
 qt6-wayland
-adwaita-icon-theme               # trae adwaita-cursors; base de la que hereda Tela
+adwaita-icon-theme               # cursor + los iconos simbólicos del tema de iconos Nanuk
 gnome-themes-extra
-tela-circle-icon-theme-grey      # iconos estilo Material, carpetas grises: Tela-circle-grey-dark
 
 # Fuentes
 ttf-cascadia-mono-nerd

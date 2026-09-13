@@ -22,6 +22,12 @@ tooltip {
 tooltip label { color: #ffffff; }
 
 /* ── Izquierda ──────────────────────────────────────────────── */
+#custom-nanuk {
+  padding: 0 10px 0 12px;
+  color: #b0b0b0;
+}
+#custom-nanuk:hover { color: #ffffff; background: #141414; }
+
 #workspaces button {
   padding: 0 9px;
   color: #707070;

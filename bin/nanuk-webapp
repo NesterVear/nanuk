@@ -12,7 +12,7 @@
 # modo app). Los .desktop de las apps web viven en:
 #   ~/.config/nanuk/default/webapps/   (las nuestras)
 #   ~/.config/nanuk/user/webapps/      (las tuyas; misma sintaxis)
-# y 06-dotfiles.sh los enlaza en ~/.local/share/applications/ para wofi.
+# y 06-dotfiles.sh los enlaza en ~/.local/share/applications/ para el launcher.
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -46,7 +46,7 @@ fi
 
 # ── Lanzar ──────────────────────────────────────────────────────────
 # uwsm-app la convierte en unidad de systemd de usuario (sobrevive a
-# hyprctl reload); setsid la despega de quien la lanzó (wofi, el atajo).
+# hyprctl reload); setsid la despega de quien la lanzó (el launcher, el atajo).
 if command -v uwsm-app &>/dev/null; then
   exec setsid uwsm-app -- "$browser" --app="$url" >/dev/null 2>&1
 else

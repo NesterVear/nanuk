@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# nanuk-keys — chuleta de atajos de teclado de Hyprland, buscable en wofi.
+# nanuk-keys — chuleta de atajos de teclado de Hyprland, buscable en fuzzel.
 # Muestra solo los que tienen descripción (los que define n.bind).
 set -euo pipefail
 
@@ -17,5 +17,4 @@ hyprctl binds -j | jq -r '
   | (mods(.modmask)) as $m
   | "\(if $m == "" then "" else $m + " + " end)\(.key)\t\(.description)"
 ' | sort -u | column -t -s $'\t' \
-  | wofi --dmenu --prompt "atajos" --width 760 --height 540 \
-         --cache-file /dev/null --insensitive >/dev/null || true
+  | fuzzel --dmenu --prompt "atajos ❯ " --width 80 --lines 18 >/dev/null || true

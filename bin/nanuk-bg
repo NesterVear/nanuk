@@ -13,7 +13,7 @@
 #   nanuk-bg <nombre|ruta> activa uno: 3, 3.jpg, mi-foto o /ruta/a/imagen.png
 #   nanuk-bg next          el siguiente de la lista (SUPER + SHIFT + B)
 #   nanuk-bg none          negro puro, sin imagen
-#   nanuk-bg apply         arranca/recarga hyprpaper con el fondo elegido (autostart)
+#   nanuk-bg apply         arranca hyprpaper o cambia la imagen en caliente (autostart)
 #   nanuk-bg path          imprime la ruta del fondo activo (nada si es none)
 #   nanuk-bg names         solo los nombres, para menús (gum)
 #
@@ -86,18 +86,27 @@ cmd_apply() {
   fi
   command -v hyprpaper &>/dev/null || die "falta hyprpaper: sudo pacman -S hyprpaper"
   mkdir -p "$(dirname "$CONF")"
+  # Formato de hyprpaper ≥ 0.8: un bloque `wallpaper` por monitor (monitor
+  # vacío = todos). `preload` y `wallpaper = monitor, ruta` ya NO existen:
+  # con ellos hyprpaper no carga nada y se queda el negro de Hyprland.
   cat > "$CONF" <<EOT
 # Generado por nanuk-bg. No editar: cambia el fondo con \`nanuk bg\`.
 splash = false
-ipc = on
-preload = $bg
-wallpaper = , $bg
+ipc = true
+
+wallpaper {
+    monitor =
+    path = $bg
+    fit_mode = cover
+}
 EOT
   if pgrep -x hyprpaper >/dev/null; then
-    # `reload` (hyprpaper ≥ 0.7) cambia la imagen en caliente en todos los
-    # monitores. Si esa orden no existiera, se reinicia y listo.
-    hyprctl hyprpaper reload ",$bg" >/dev/null 2>&1 \
-      || { pkill -x hyprpaper; sleep 0.2; start_hyprpaper; }
+    # En caliente por IPC: hyprctl hyprpaper wallpaper 'monitor, ruta, modo'.
+    # Si falla o responde con error, se reinicia y lee el archivo de arriba.
+    local out
+    if ! out="$(hyprctl hyprpaper wallpaper ", $bg, cover" 2>&1)" || [[ "$out" == *[Ee]rror* ]]; then
+      pkill -x hyprpaper; sleep 0.2; start_hyprpaper
+    fi
   else
     start_hyprpaper
   fi

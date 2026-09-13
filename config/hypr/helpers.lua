@@ -11,7 +11,7 @@ n = n or {}
 -- ~/.config/nanuk/user/hypr/apps.lua escribe p. ej.:  n.apps.terminal = "kitty"
 n.apps = {
   terminal = "kitty",
-  launcher = "wofi",
+  launcher = "fuzzel",
   -- gtk-launch abre el .desktop del navegador por defecto (xdg-settings).
   browser = 'gtk-launch "$(xdg-settings get default-web-browser)"',
   files = "nautilus --new-window",

@@ -4,7 +4,7 @@
   "height": 24,
   "spacing": 0,
 
-  "modules-left": ["hyprland/workspaces", "custom/keys"],
+  "modules-left": ["custom/nanuk", "hyprland/workspaces", "custom/keys"],
   "modules-center": ["clock", "custom/weather"],
   "modules-right": ["tray", "network", "bluetooth", "wireplumber", "battery"],
 
@@ -13,6 +13,14 @@
     "on-click": "activate",
     "all-outputs": false,
     "sort-by-number": true
+  },
+
+  // Menú Nanuk (copo de nieve): buscar/instalar/quitar paquetes, tema, fondo y
+  // actualizar, en una terminal flotante. Lo mismo que Super+Shift+I.
+  "custom/nanuk": {
+    "format": "󰜗",
+    "tooltip-format": "Menú Nanuk: paquetes, tema, fondo, actualizar  (Super+Shift+I)",
+    "on-click": "uwsm-app -- kitty --class nanuk.tui nanuk menu"
   },
 
   // Atajos de teclado: icono a la izquierda; clic → lista buscable (nanuk-keys).

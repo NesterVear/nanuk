@@ -20,7 +20,7 @@ Hay dos maneras en que una app lee tu capa, según si soporta "includes" o no:
 | Mecanismo               | Apps                                                      | Cómo funciona                                                         |
 |-------------------------|-----------------------------------------------------------|-----------------------------------------------------------------------|
 | **Capas reales**        | Hyprland, bash                                            | Se carga `default/` y **después** `user/`. Lo tuyo gana línea a línea. |
-| **Precedencia de ruta** | waybar, kitty, mako, wofi, fastfetch, GTK, starship, hyprlock, hypridle, lazygit, lazydocker | Si existe `user/<app>`, se enlaza esa; si no, `default/<app>`. Todo o nada por app. |
+| **Precedencia de ruta** | waybar, kitty, mako, fuzzel, fastfetch, GTK, starship, hyprlock, hypridle, lazygit, lazydocker | Si existe `user/<app>`, se enlaza esa; si no, `default/<app>`. Todo o nada por app. |
 
 ---
 
@@ -67,7 +67,7 @@ nvim ~/.config/nanuk/user/starship.toml
 bash ~/.local/share/nanuk/install/06-dotfiles.sh    # rehace los enlaces
 ```
 
-### Barra, terminal, notificaciones, launcher (waybar, kitty, mako, wofi)
+### Barra, terminal, notificaciones, launcher (waybar, kitty, mako, fuzzel)
 
 Estas apps no saben de capas: se copia **la carpeta entera** a `user/` y se
 edita ahí. A partir de ese momento esa app deja de recibir cambios nuestros
@@ -79,7 +79,7 @@ nvim ~/.config/nanuk/user/waybar/config.jsonc
 bash ~/.local/share/nanuk/install/06-dotfiles.sh    # ~/.config/waybar → user/waybar
 ```
 
-Lo mismo con `kitty`, `mako`, `wofi`, `fastfetch`, `gtk-3.0`,
+Lo mismo con `kitty`, `mako`, `fuzzel`, `fastfetch`, `gtk-3.0`,
 `gtk-4.0`, `lazygit`, `lazydocker`, y con los archivos sueltos
 `hypr/hyprlock.conf` y `hypr/hypridle.conf`.
 
@@ -111,11 +111,20 @@ n.bind("SUPER + SHIFT + Y", "YouTube", "nanuk-webapp https://youtube.com --focus
 
 ### El menú: `nanuk menu` (o `SUPER + SHIFT + I`)
 
-Para no tener que recordar comandos. Un menú en la terminal (hecho con `gum`)
-con: instalar o quitar un paquete escribiendo solo el nombre, añadir o quitar
-una app web con nombre y URL, instalar un lenguaje, actualizar el sistema y
-el diagnóstico. Por debajo llama a los mismos `nanuk install`, `nanuk webapp`,
-`nanuk lang`… así que todo queda anotado en tu capa igual.
+Para no tener que recordar comandos. También con el copo de nieve de la
+izquierda de la barra. Un menú en una terminal flotante (`gum` + `fzf`) con:
+
+- **Buscar e instalar paquetes**: todos los de los repos oficiales y del AUR
+  en una lista que se filtra al escribir, con la ficha del paquete al lado.
+  `Tab` marca varios. Un id de flatpak (`com.spotify.Client`) se escribe tal
+  cual y `Enter`.
+- **Quitar paquetes**: lo instalado a propósito y tus flatpaks. Lo que viene
+  con Nanuk sale marcado y pide confirmación.
+- **Actualizar el sistema**, **cambiar el tema**, **cambiar el fondo**, apps
+  web, lenguajes y el diagnóstico.
+
+Por debajo llama a los mismos `nanuk install`, `nanuk remove`, `nanuk theme`…
+así que todo queda anotado en tu capa igual.
 
 ### Paquetes
 
@@ -254,6 +263,10 @@ a partir de ese enlace: no lo edites a mano.
 | `~/.config/nvim/`                     | Solo `colors/nanuk.lua` y `lua/plugins/nanuk.lua` |
 | `~/.config/btop/btop.conf`            | No (se copió una vez)                         |
 | `~/.bashrc`                           | No (el bloque nanuk se añade solo si falta)   |
+| `~/.local/share/icons/Nanuk/`         | Sí, se regenera (tema de iconos monocromo)    |
+| gsettings (modo oscuro, iconos, fuente) | Sí, se reaplican                            |
+| Paquetes                              | Solo se instalan los que Nanuk **añadió** a sus listas desde la última vez; los que ya no usa se avisan, no se borran |
+| `~/.local/share/nanuk` (el repo)      | `git pull`; si lo editaste, tus cambios quedan en `git stash` |
 
 Si alguna vez encuentras algo tuyo con sufijo `.bak.<timestamp>`, es que
 Nanuk lo encontró donde esperaba poner un enlace y lo apartó en vez de borrarlo.

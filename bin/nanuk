@@ -11,9 +11,9 @@
 #   nanuk remove  <paquete...>   desinstala y lo quita de tu lista
 #   nanuk list                   muestra tu lista personal
 #   nanuk sync                   instala todo lo de tu lista (máquina nueva)
-#   nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+#   nanuk update                 actualiza repo + sistema + AUR + flatpak + paquetes nuevos + dotfiles
 #   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
-#   nanuk menu                   menú interactivo: paquetes, apps web, lenguajes...
+#   nanuk menu                   menú: buscar/quitar paquetes, tema, fondo, actualizar...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
 #   nanuk bg [<fondo>|next|none]  fondo de pantalla: lista, cambia, rota, negro puro
 #   nanuk edit                   abre tu capa de config en $EDITOR
@@ -139,12 +139,97 @@ cmd_sync() {
   say "sincronizado"
 }
 
+# ── Actualizar ───────────────────────────────────────────────────
+STATE="$HOME/.local/state/nanuk"
+PKG_COMMIT="$STATE/packages-commit"     # versión de las listas ya aplicada
+REPO_LISTS=(base desktop dev 3dprint virt security)   # las de pacman, como 03
+
+# Paquetes de uno o más archivos del repo (sin comentarios ni líneas vacías).
+list_pkgs() { (cd "$REPO" && sed 's/#.*//' "$@" 2>/dev/null) | awk 'NF { print $1 }'; }
+
+# changed_pkgs <+|-> <commit> <archivo...>: paquetes añadidos (+) o quitados
+# (-) en esas listas entre <commit> y la versión actual del repo.
+changed_pkgs() {
+  local sign="$1" from="$2"; shift 2
+  git -C "$REPO" diff -U0 "$from" HEAD -- "$@" 2>/dev/null \
+    | sed -n "s/^[$sign]\([^$sign].*\)$/\1/p" | sed 's/#.*//' | awk 'NF { print $1 }'
+}
+
+# Paquetes NUEVOS de Nanuk (p. ej. fuzzel al cambiar de launcher). Compara las
+# listas de la última vez (packages-commit, lo escriben install.sh y esto) con
+# las de ahora e instala solo lo añadido: si quitaste algo de la base a
+# propósito, no vuelve. Sin ese registro (instalaciones anteriores a esto) se
+# instala, una vez, lo que falte de las listas de pacman.
+update_packages() {
+  local head from="" p
+  head="$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" \
+    || { warn "$REPO no es un repo git: no puedo ver qué paquetes son nuevos"; return 0; }
+  [[ -f "$PKG_COMMIT" ]] && from="$(<"$PKG_COMMIT")"
+  local files=() l
+  for l in "${REPO_LISTS[@]}"; do files+=("packages/$l.txt"); done
+
+  local -a repo=() aur=() fp=() gone=()
+  if [[ -n "$from" ]] && git -C "$REPO" cat-file -e "$from^{commit}" 2>/dev/null; then
+    [[ "$from" != "$head" ]] || return 0
+    mapfile -t repo < <(changed_pkgs + "$from" "${files[@]}")
+    mapfile -t aur  < <(changed_pkgs + "$from" packages/aur.txt)
+    mapfile -t fp   < <(changed_pkgs + "$from" packages/flatpak.txt)
+    # Quitados de las listas y aún instalados: solo se avisa, no se borra nada.
+    while read -r p; do
+      pacman -Qq -- "$p" &>/dev/null && gone+=("$p")
+    done < <(comm -23 <(changed_pkgs - "$from" 'packages/*.txt' | sort -u) <(nanuk_packages))
+  else
+    mapfile -t repo < <(list_pkgs "${files[@]}")
+  fi
+
+  if (( ${#repo[@]} )); then
+    say "paquetes de Nanuk (repos): ${repo[*]:0:12}$( (( ${#repo[@]} > 12 )) && echo " …")"
+    if sudo pacman -S --needed --noconfirm -- "${repo[@]}"; then
+      sudo pacman -D --asexplicit -- "${repo[@]}" >/dev/null || true
+    else
+      warn "no se pudieron instalar todos: ${repo[*]}"
+    fi
+  fi
+  if (( ${#aur[@]} )); then
+    if [[ -n "$AUR" ]]; then
+      say "paquetes nuevos de Nanuk (AUR): ${aur[*]}"
+      "$AUR" -S --needed --noconfirm -- "${aur[@]}" || warn "falló parte del AUR: ${aur[*]}"
+    else
+      warn "sin ayudante del AUR; se omiten: ${aur[*]}"
+    fi
+  fi
+  if (( ${#fp[@]} )) && command -v flatpak &>/dev/null; then
+    say "flatpaks nuevos de Nanuk: ${fp[*]}"
+    flatpak install --user -y --noninteractive flathub "${fp[@]}" || warn "falló parte de flatpak"
+  fi
+  if (( ${#gone[@]} )); then
+    warn "Nanuk ya no usa: ${gone[*]}. Si no los quieres: nanuk remove ${gone[*]}"
+  fi
+  mkdir -p "$STATE"
+  echo "$head" > "$PKG_COMMIT"
+}
+
 cmd_update() {
-  say "actualizando el repositorio de Nanuk..."
-  git -C "$REPO" pull --ff-only || warn "no se pudo hacer pull (¿cambios locales?)"
+  if [[ "${1:-}" != --no-pull ]]; then
+    say "actualizando el repositorio de Nanuk..."
+    if [[ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]]; then
+      # Cambios locales en la copia del sistema (~/.local/share/nanuk; tu capa
+      # user/ vive en otro sitio y no se toca). Se guardan en un stash en vez
+      # de perderlos, y el pull ya no falla. Verlos: git -C <repo> stash list
+      if git -C "$REPO" stash push --include-untracked -m "nanuk update $(date '+%F %T')" >/dev/null; then
+        warn "había cambios locales en $REPO: guardados con git stash"
+      fi
+    fi
+    git -C "$REPO" pull --ff-only || warn "no se pudo hacer pull (¿sin red?)"
+    # El pull puede haber cambiado este mismo script: el resto lo hace la
+    # versión nueva.
+    exec bash "$REPO/bin/nanuk" update --no-pull
+  fi
 
   say "actualizando el sistema (pacman)..."
   sudo pacman -Syu --noconfirm
+
+  update_packages
 
   if [[ -n "$AUR" ]]; then
     say "actualizando el AUR..."
@@ -159,9 +244,15 @@ cmd_update() {
   say "re-desplegando la config por defecto (tu capa user/ no se toca)..."
   bash "$REPO/install/06-dotfiles.sh"
 
+  # Dentro de Hyprland: aplicar ya la config nueva y que la barra la relea.
+  if command -v hyprctl &>/dev/null && hyprctl version &>/dev/null; then
+    hyprctl reload >/dev/null || true
+    pkill -SIGUSR2 -x waybar || true
+    say "Hyprland y la barra recargados"
+  fi
+
   echo
-  echo "${B}Listo.${X} Para aplicar la config de Hyprland: ${C}hyprctl reload${X}"
-  echo "(o Super+Esc → Relaunch si cambió algo de entorno)."
+  echo "${B}Listo.${X} Si cambió algo del entorno (variables, autostart): cierra sesión y vuelve a entrar."
 }
 
 cmd_theme() {
@@ -258,11 +349,75 @@ EOF
 }
 
 # ── Menú interactivo ─────────────────────────────────────────────
-# Para quien no quiere aprenderse comandos: todo lo de arriba, con gum.
+# Para quien no quiere aprenderse comandos: todo lo de arriba, con gum y fzf.
 # Cada opción llama al mismo cmd_* que la CLI, así que el resultado es el
-# mismo (y queda anotado en tu capa igual).
+# mismo (y queda anotado en tu capa igual). Se abre con Super+Shift+I o con
+# el copo de nieve de la barra, en una terminal flotante.
+
+# fzf a juego con el tema: gris y blanco; hielo solo en el puntero (el foco).
+FZF_NANUK=(
+  --layout=reverse --info=inline-right --border=none --prompt="❯ "
+  --color='bg:#000000,fg:#b0b0b0,hl:#ffffff,bg+:#141414,fg+:#ffffff,hl+:#ffffff,query:#ffffff'
+  --color='pointer:#9fd8ff,marker:#9fd8ff,prompt:#707070,info:#505050,header:#909090,border:#333333,gutter:#000000'
+  --preview-window='right,55%,wrap,border-left'
+)
+
+# Los paquetes que trae Nanuk (packages/*.txt), uno por línea.
+nanuk_packages() {
+  sed 's/#.*//; s/:aur$//' "$REPO"/packages/*.txt 2>/dev/null | awk 'NF { print $1 }' | sort -u
+}
+
+# Buscar e instalar: TODO lo instalable (repos oficiales + AUR) en una lista
+# que se filtra al escribir, con la ficha del paquete a la derecha. Tab marca
+# varios. Si escribes algo que no está en la lista (un id de flatpak como
+# com.spotify.Client) y pulsas Enter, se instala eso tal cual.
+menu_install() {
+  local picks
+  picks="$(
+    {
+      pacman -Sl 2>/dev/null | awk '{ printf "%s\t%s%s\n", $2, $1, ($4 ? "  · instalado" : "") }'
+      [[ -n "$AUR" ]] && "$AUR" -Slqa 2>/dev/null | awk '{ printf "%s\taur\n", $1 }'
+    } | fzf "${FZF_NANUK[@]}" --multi --delimiter='\t' --nth=1 --tiebreak=begin,length \
+          --header='Instalar · escribe para buscar · Tab marca varios · Enter instala · Esc vuelve' \
+          --preview="pacman -Si {1} 2>/dev/null || ${AUR:-false} -Si {1} 2>/dev/null" \
+          --bind='enter:accept-or-print-query' \
+      | cut -f1
+  )" || true
+  [[ -n "$picks" ]] || return 0
+  # shellcheck disable=SC2086  # un paquete por palabra
+  cmd_install $picks || true
+}
+
+# Quitar: lo que está instalado a propósito (pacman -Qe) + tus flatpaks. Lo
+# que viene con Nanuk sale marcado y pide una confirmación más seria.
+menu_remove() {
+  local picks core
+  picks="$(
+    {
+      pacman -Qeq | awk -v list="$(nanuk_packages | paste -sd,)" '
+        BEGIN { n = split(list, a, ","); for (i = 1; i <= n; i++) nanuk[a[i]] = 1 }
+        { printf "%s\t%s\n", $1, (($1 in nanuk) ? "viene con Nanuk" : "") }'
+      command -v flatpak &>/dev/null \
+        && flatpak list --user --app --columns=application 2>/dev/null | awk 'NF { printf "%s\tflatpak\n", $1 }'
+    } | fzf "${FZF_NANUK[@]}" --multi --delimiter='\t' --nth=1 \
+          --header='Quitar · Tab marca varios · Enter quita · Esc vuelve' \
+          --preview='pacman -Qi {1} 2>/dev/null || flatpak info {1} 2>/dev/null' \
+      | cut -f1
+  )" || true
+  [[ -n "$picks" ]] || return 0
+  core="$(grep -xF -f <(nanuk_packages) <<<"$picks" || true)"
+  if [[ -n "$core" ]]; then
+    gum confirm "Vienen con Nanuk y quitarlos puede romper el escritorio: $(paste -sd' ' <<<"$core"). ¿Quitar igualmente?" || return 0
+  else
+    gum confirm "¿Quitar $(paste -sd' ' <<<"$picks")?" || return 0
+  fi
+  # shellcheck disable=SC2086
+  cmd_remove $picks || true
+}
+
 cmd_menu() {
   command -v gum &>/dev/null || die "falta 'gum' (está en base.txt): sudo pacman -S gum"
+  command -v fzf &>/dev/null || die "falta 'fzf' (está en base.txt): sudo pacman -S fzf"
   # Estética Nanuk: hielo solo en el cursor (el foco), el resto gris/blanco.
   export GUM_CHOOSE_CURSOR_FOREGROUND="#9fd8ff" GUM_CHOOSE_HEADER_FOREGROUND="#909090" \
          GUM_CHOOSE_SELECTED_FOREGROUND="#ffffff" GUM_INPUT_CURSOR_FOREGROUND="#9fd8ff" \
@@ -272,31 +427,37 @@ cmd_menu() {
   while true; do
     echo
     choice="$(gum choose --header "nanuk · ¿qué quieres hacer?" \
-      "Instalar un paquete" \
-      "Quitar un paquete" \
+      "Buscar e instalar paquetes" \
+      "Quitar paquetes" \
+      "Actualizar el sistema" \
+      "Cambiar el tema" \
+      "Cambiar el fondo de pantalla" \
       "Añadir una app web (nombre + URL)" \
       "Quitar una app web" \
       "Instalar un lenguaje" \
-      "Cambiar el fondo de pantalla" \
-      "Actualizar el sistema" \
       "Diagnóstico (doctor)" \
       "Salir")" || return 0
     case "$choice" in
-      "Instalar un paquete")
-        local pkgs; pkgs="$(gum input --placeholder "nombre del paquete (o varios separados por espacio)")" || continue
-        [[ -n "$pkgs" ]] || continue
-        # shellcheck disable=SC2086  # queremos que se separe por espacios
-        cmd_install $pkgs || true ;;
-      "Quitar un paquete")
-        ensure_list
-        local pkg
-        if [[ -s "$LIST" ]]; then
-          pkg="$(sed 's/:aur$//; s/^flatpak://' "$LIST" | gum choose --header "de tu lista personal")" || continue
-        else
-          pkg="$(gum input --placeholder "nombre del paquete")" || continue
-        fi
-        [[ -n "$pkg" ]] || continue
-        gum confirm "¿Quitar $pkg?" && { cmd_remove "$pkg" || true; } ;;
+      "Buscar e instalar paquetes") menu_install ;;
+      "Quitar paquetes")            menu_remove ;;
+      "Actualizar el sistema")
+        # En otro proceso: update se relanza a sí mismo tras el pull (exec) y
+        # cerraría el menú.
+        gum confirm "¿Actualizar Nanuk, sistema, AUR, flatpak y config por defecto?" \
+          && { bash "$REPO/bin/nanuk" update || true; } ;;
+      "Cambiar el tema")
+        local theme active
+        active="$(basename "$(readlink -f "$NANUK_CFG/theme" 2>/dev/null)")"
+        theme="$(for d in "$NANUK_CFG/themes"/*/; do basename "$d"; done \
+                 | gum choose --header "tema (activo: $active)")" || continue
+        [[ -n "$theme" ]] || continue
+        cmd_theme "$theme" ;;
+      "Cambiar el fondo de pantalla")
+        local bg
+        bg="$( { "$REPO/bin/nanuk-bg" names; echo "none  (negro puro, sin imagen)"; } \
+              | gum choose --header "fondo de pantalla (los tuyos van en ~/.config/nanuk/user/backgrounds/)")" || continue
+        [[ -n "$bg" ]] || continue
+        "$REPO/bin/nanuk-bg" "${bg%%  *}" || true ;;
       "Añadir una app web (nombre + URL)")
         local name url
         name="$(gum input --placeholder "Nombre (p. ej. YouTube)")" || continue
@@ -312,14 +473,6 @@ cmd_menu() {
         local lang
         lang="$(gum choose --header "lenguaje" rust node python go ruby java php r)" || continue
         cmd_lang "$lang" || true ;;
-      "Cambiar el fondo de pantalla")
-        local bg
-        bg="$( { "$REPO/bin/nanuk-bg" names; echo "none  (negro puro, sin imagen)"; } \
-              | gum choose --header "fondo de pantalla (los tuyos van en ~/.config/nanuk/user/backgrounds/)")" || continue
-        [[ -n "$bg" ]] || continue
-        "$REPO/bin/nanuk-bg" "${bg%%  *}" || true ;;
-      "Actualizar el sistema")
-        gum confirm "¿Actualizar sistema, AUR, flatpak y config por defecto?" && { cmd_update || true; } ;;
       "Diagnóstico (doctor)")
         cmd_doctor ;;
       "Salir"|"") return 0 ;;
@@ -430,10 +583,11 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk remove  <paquete...>   desinstala y lo quita de tu lista
   nanuk list                   muestra tu lista personal
   nanuk sync                   instala todo lo de tu lista (máquina nueva)
-  nanuk update                 actualiza sistema + AUR + flatpak + dotfiles
+  nanuk update                 actualiza Nanuk (git pull), sistema, AUR, flatpak,
+                               instala los paquetes nuevos de Nanuk y re-despliega la config
   nanuk webapp add "Nombre" <url>   crea una app web (Brave, ventana propia) en tu capa
   nanuk webapp remove <nombre> | list
-  nanuk menu                   menú interactivo con todo lo anterior (también Super+Shift+I)
+  nanuk menu                   menú con buscador: paquetes, tema, fondo, actualizar (Super+Shift+I)
   nanuk theme [<tema>]         lista temas / cambia el activo
   nanuk bg [<fondo>|next|none] fondo de pantalla: lista / cambia / rota (Super+Shift+B) / negro puro
   nanuk lang [<lenguaje...>]   instala/lista lenguajes (rust node python go php r ...)
