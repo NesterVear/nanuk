@@ -56,6 +56,9 @@ MARK="$BK/.marca"; touch "$MARK"   # para encontrar los .pacsave que cree ESTE p
 if (( ! YA_PURGADO )); then
   mapfile -t WANT < <(read_list "$NANUK_ROOT"/packages/{base,desktop,dev,3dprint,virt,security}.txt)
   WANT+=(limine limine-mkinitcpio-hook intel-ucode amd-ucode yay mise)
+  # La instalación por defecto de Omarchy es btrfs, y btrfs-progs solo cuelga de
+  # snapper: sin esto se iría con él (y con él fsck.btrfs para el initramfs).
+  findmnt -rn -t btrfs >/dev/null && WANT+=(btrfs-progs)
   # Se protege el paquete QUE ESTÁ INSTALADO, no el nombre de la lista: `pacman -Q
   # nodejs` acierta si tienes nodejs-lts-jod (lo "provee"), pero `pacman -D nodejs`
   # no lo encuentra y, con set -e, cortaba la purga aquí.

@@ -78,7 +78,9 @@ paquetes de Nanuk se quedan (no molestan). Solo funciona **antes** de la fase B.
    Es una aproximación: el script protege además las listas de Nanuk. Lo normal
    es que quite los cuatro `omarchy*` y lo que Omarchy traía para las
    instantáneas (`snapper`, `limine-snapper-sync` y, si tu disco no es btrfs,
-   `btrfs-progs`). Si `/` o `/home` son btrfs, revisa la lista antes de aceptar.
+   `btrfs-progs`). Si `/` o `/home` son btrfs (la instalación por defecto de
+   Omarchy), `btrfs-progs` se queda; las instantáneas ya hechas siguen en el
+   disco como subvolúmenes. Revisa la lista antes de aceptar.
 
 Después:
 
@@ -91,7 +93,8 @@ Qué hace:
 1. Comprueba que estás en una sesión Nanuk (tu `hyprland.lua` es el de Nanuk y
    hay autologin).
 2. Marca como explícitos los paquetes que Nanuk necesita (sus listas, `limine`,
-   `limine-mkinitcpio-hook`, microcode, `yay`, `mise`) para que no se vayan como
+   `limine-mkinitcpio-hook`, microcode, `yay`, `mise` y `btrfs-progs` si hay algún
+   sistema de archivos btrfs montado) para que no se vayan como
    dependencias de Omarchy. Si tienes una variante que sustituye a otro paquete
    (`nodejs-lts-jod` en lugar de `nodejs`, por ejemplo), protege la que tienes.
 3. Escribe `/etc/limine-entry-tool.d/nanuk.conf` (UKI, nombre "Nanuk", arranque
