@@ -47,8 +47,14 @@ MARK="$BK/.marca"; touch "$MARK"   # para encontrar los .pacsave que cree ESTE p
 # ── 2. Proteger paquetes ───────────────────────────────────────────
 mapfile -t WANT < <(read_list "$NANUK_ROOT"/packages/{base,desktop,dev,3dprint,virt,security}.txt)
 WANT+=(limine limine-mkinitcpio-hook intel-ucode amd-ucode yay mise)
+# Se protege el paquete QUE ESTÁ INSTALADO, no el nombre de la lista: `pacman -Q
+# nodejs` acierta si tienes nodejs-lts-jod (lo "provee"), pero `pacman -D nodejs`
+# no lo encuentra y, con set -e, cortaba la purga aquí.
 KEEP=()
-for p in "${WANT[@]}"; do pacman -Q -- "$p" &>/dev/null && KEEP+=("$p"); done
+for p in "${WANT[@]}"; do
+  q="$(pacman -Qq -- "$p" 2>/dev/null | head -n 1)" && [[ -n "$q" ]] && KEEP+=("$q")
+done
+mapfile -t KEEP < <(printf '%s\n' "${KEEP[@]}" | sort -u)
 sudo pacman -D --asexplicit "${KEEP[@]}" >/dev/null
 echo "✔ ${#KEEP[@]} paquetes de Nanuk protegidos (explícitos)"
 

@@ -538,8 +538,10 @@ install_nanuk() {
   step "Instalando Nanuk"
   local home="$MNT/home/$USERNAME" dest="/home/$USERNAME/.local/share/nanuk"
   mkdir -p "$home/.local/share"
-  # Nanuk MÁS RECIENTE: con internet se clona main de GitHub, así una ISO de
-  # hace meses instala las listas de paquetes, scripts y config de hoy. Solo si
+  # Nanuk MÁS RECIENTE: con internet se clona el repo de GitHub y se deja en la
+  # etiqueta "estable" (la última versión PROBADA; main si aún no existe), así
+  # una ISO de hace meses instala las listas de paquetes, scripts y config de
+  # hoy. Solo si
   # falla (sin red, GitHub caído) se usa la copia que viaja dentro de la ISO.
   # (Los paquetes en sí siempre salen de los mirrors en su última versión:
   # la ISO no lleva paquetes para el sistema instalado, solo sus nombres.)
@@ -549,6 +551,9 @@ install_nanuk() {
      && busy "Descargando la última versión de Nanuk" \
           timeout 120 git clone --quiet "$NANUK_REPO_URL" "$latest" \
      && [[ -f "$latest/install/install.sh" ]]; then
+    if git -C "$latest" rev-parse -q --verify "refs/tags/estable^{commit}" >/dev/null; then
+      git -C "$latest" reset --quiet --hard refs/tags/estable
+    fi
     say "Nanuk: $(git -C "$latest" log -1 --format='%h · %cs · %s')"
     cp -a "$latest" "$MNT$dest"
   else

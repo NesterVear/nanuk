@@ -18,6 +18,9 @@ set -euo pipefail
 #   NANUK_REPO=/ruta/a/mi/repo bash boot.sh
 REPO="${NANUK_REPO:-https://github.com/nestervear/nanuk.git}"
 NANUK_DIR="$HOME/.local/share/nanuk"
+# Canal: la etiqueta "estable" se mueve cuando una versión ya está probada, así
+# que se instala esa y no el último commit. NANUK_CHANNEL=main para lo último.
+CHANNEL="${NANUK_CHANNEL:-estable}"
 
 echo "🐻‍❄️  Nanuk — instalación"
 echo "    repo:    $REPO"
@@ -39,14 +42,27 @@ if ! command -v git &>/dev/null; then
 fi
 
 if [[ -d "$NANUK_DIR/.git" ]]; then
-  # Ya estaba clonado: solo traemos lo último. Así boot.sh sirve
+  # Ya estaba clonado: solo traemos lo nuevo. Así boot.sh sirve
   # tanto para instalar como para re-instalar/actualizar.
   echo "→ Repo ya existente, actualizando..."
-  git -C "$NANUK_DIR" pull --ff-only
+  git -C "$NANUK_DIR" fetch --force --tags origin
+  FRESH=0
 else
   echo "→ Clonando repo..."
   git clone "$REPO" "$NANUK_DIR"
+  FRESH=1
 fi
+
+# Commit del canal; si la etiqueta aún no existe en el repo, main.
+TARGET="$(git -C "$NANUK_DIR" rev-parse -q --verify "refs/tags/$CHANNEL^{commit}" \
+          || git -C "$NANUK_DIR" rev-parse -q --verify "refs/remotes/origin/main^{commit}")"
+if (( FRESH )); then
+  git -C "$NANUK_DIR" reset --quiet --hard "$TARGET"
+else
+  # Repo existente: solo avanza (si tienes cambios propios, falla en vez de pisarlos).
+  git -C "$NANUK_DIR" merge --ff-only --quiet "$TARGET"
+fi
+echo "    versión: $(git -C "$NANUK_DIR" log -1 --format='%h · %cs · %s')"
 
 # Cedemos el control al orquestador. exec reemplaza este proceso por el
 # instalador: a partir de aquí ya corre el código del repo clonado.

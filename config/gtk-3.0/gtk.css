@@ -25,12 +25,16 @@ headerbar, .titlebar      { background-color: #000000; box-shadow: inset 0 -1px 
 entry, textview, .view    { background-color: #000000; }
 popover > contents, menu  { background-color: #0a0a0a; border: 1px solid #1a1a1a; }
 
-/* Listas y rejillas (Nautilus, diálogos): selección gris, foco con línea de
- * hielo, separadores casi invisibles. Radio 0 en todo: densidad estricta. */
+/* Listas y rejillas (Nautilus, diálogos): la selección es un contorno de hielo
+ * sin relleno (un fondo gris sobre negro no se ve), separadores casi
+ * invisibles. Radio 0 en todo: densidad estricta. */
 list, listview, gridview, columnview          { background-color: #000000; color: #ffffff; }
-row:selected, listview > row:selected, gridview > child:selected,
-columnview > listview > row:selected           { background-color: #1e1e1e; color: #ffffff; }
-row:selected:focus, gridview > child:selected:focus { box-shadow: inset 0 0 0 1px #9fd8ff; }
+row:selected, .view:selected, listview > row:selected, gridview > child:selected,
+columnview > listview > row:selected           { background-color: #000000; color: #ffffff; box-shadow: inset 0 0 0 1px #9fd8ff; }
+/* GtkTreeView (la lista de archivos del diálogo abrir/guardar en GTK3) pinta
+ * cada columna por separado: con el contorno completo saldrían rayas entre
+ * columnas, así que solo lleva las líneas de arriba y abajo. */
+treeview.view:selected                         { box-shadow: inset 0 1px #9fd8ff, inset 0 -1px #9fd8ff; }
 separator                                      { background-color: #1a1a1a; min-height: 1px; }
 button, entry, popover, menu, .card, window, dialog, tooltip, headerbar,
 list, listview > row, gridview > child, notebook > header > tabs > tab { border-radius: 0; }

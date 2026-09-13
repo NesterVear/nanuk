@@ -5,7 +5,7 @@
   "spacing": 0,
 
   "modules-left": ["custom/nanuk", "hyprland/workspaces", "custom/keys"],
-  "modules-center": ["clock", "custom/weather"],
+  "modules-center": ["clock", "custom/weather", "custom/updates"],
   "modules-right": ["tray", "network", "bluetooth", "wireplumber", "battery"],
 
   "hyprland/workspaces": {
@@ -46,6 +46,18 @@
     "return-type": "json",
     "interval": 900,
     "on-click": "~/.config/waybar/weather.sh --refresh"
+  },
+
+  // Rueda de actualizaciones: solo aparece si hay algo pendiente (repos, AUR,
+  // flatpak o commits nuevos de Nanuk). Clic → terminal flotante que lo lista
+  // y pregunta si actualizar ya. Internet: una vez por arranque, una hora
+  // después de encender (y otra si la sesión pasa de 24 h); cada 10 min solo
+  // se lee lo guardado. `nanuk update` recarga la barra y la rueda desaparece.
+  "custom/updates": {
+    "exec": "~/.config/waybar/updates.sh",
+    "return-type": "json",
+    "interval": 600,
+    "on-click": "uwsm-app -- kitty --class nanuk.tui nanuk check --ask"
   },
 
   "wireplumber": {

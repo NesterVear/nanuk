@@ -118,10 +118,32 @@ izquierda de la barra. Un menú en una terminal flotante (`gum` + `fzf`) con:
   en una lista que se filtra al escribir, con la ficha del paquete al lado.
   `Tab` marca varios. Un id de flatpak (`com.spotify.Client`) se escribe tal
   cual y `Enter`.
-- **Quitar paquetes**: lo instalado a propósito y tus flatpaks. Lo que viene
-  con Nanuk sale marcado y pide confirmación.
+- **Quitar paquetes**: TODOS los paquetes instalados y tus flatpaks, con su
+  versión y una marca: *viene con Nanuk*, *dependencia* o nada (lo instalaste
+  tú). `Espacio` marca varios y se quitan juntos en una sola operación de
+  pacman; si otro paquete todavía necesita alguno, no quita nada y dice cuál.
+  Lo que viene con Nanuk pide una confirmación más seria.
 - **Actualizar el sistema**, **cambiar el tema**, **cambiar el fondo**, apps
   web, lenguajes y el diagnóstico.
+
+### La rueda de actualizaciones (barra)
+
+Junto al clima aparece una rueda (󰒓) **solo cuando hay algo que actualizar**:
+repos oficiales, AUR, flatpak o commits nuevos de Nanuk. Pasa el ratón por
+encima para ver la lista; clic → una terminal flotante la muestra y pregunta
+si actualizar ahora (`nanuk update`). Se consulta internet **una vez por
+encendido, una hora después de arrancar** (paquetes y si hay una versión
+**estable** nueva de Nanuk), y otra vez si no apagas en más de 24 h. Si en ese
+momento no hay red, lo reintenta a los 10 minutos. Lo mismo desde la terminal,
+al momento: `nanuk check` (solo mira, no cambia nada).
+
+Nanuk sigue la etiqueta `estable` del repo, no cada commit. Para seguir lo
+último (`main`), o volver a `estable`:
+
+```bash
+echo main > ~/.config/nanuk/user/channel     # lo último
+rm ~/.config/nanuk/user/channel              # estable (por defecto)
+```
 
 Por debajo llama a los mismos `nanuk install`, `nanuk remove`, `nanuk theme`…
 así que todo queda anotado en tu capa igual.
@@ -287,7 +309,7 @@ queda en `~/.local/state/nanuk/swaybg.log`.
 | `~/.local/share/icons/Nanuk/`         | Sí, se regenera (tema de iconos monocromo)    |
 | gsettings (modo oscuro, iconos, fuente) | Sí, se reaplican                            |
 | Paquetes                              | Solo se instalan los que Nanuk **añadió** a sus listas desde la última vez; los que ya no usa se avisan, no se borran |
-| `~/.local/share/nanuk` (el repo)      | `git pull`; si lo editaste, tus cambios quedan en `git stash` |
+| `~/.local/share/nanuk` (el repo)      | Pasa a la versión `estable` (o la de `user/channel`); si lo editaste, tus cambios quedan en `git stash` |
 
 Si alguna vez encuentras algo tuyo con sufijo `.bak.<timestamp>`, es que
 Nanuk lo encontró donde esperaba poner un enlace y lo apartó en vez de borrarlo.

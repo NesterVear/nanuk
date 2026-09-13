@@ -12,6 +12,7 @@
 #   nanuk list                   muestra tu lista personal
 #   nanuk sync                   instala todo lo de tu lista (máquina nueva)
 #   nanuk update                 actualiza repo + sistema + AUR + flatpak + paquetes nuevos + dotfiles
+#   nanuk check [--json|--ask]   ¿hay actualizaciones? (la rueda de la barra usa --json y --ask)
 #   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
 #   nanuk menu                   menú: buscar/quitar paquetes, tema, fondo, actualizar...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
@@ -42,6 +43,56 @@ ensure_list() { mkdir -p "$(dirname "$LIST")"; touch "$LIST"; }
 # Ayudante del AUR: yay (el de Nanuk) o paru si la máquina ya lo trae.
 # Vacío si no hay ninguno.
 AUR="$(command -v yay || command -v paru || true)"
+
+# ── Canal de actualizaciones ───────────────────────────────────────
+# `nanuk update` y la rueda de la barra siguen la ETIQUETA "estable" del repo,
+# no el último commit. Quien mantiene Nanuk la mueve cuando una versión ya está
+# probada:   git tag -f estable && git push -f origin estable
+# Los commits de en medio no le llegan a nadie. Para seguir otra etiqueta o una
+# rama (main = lo último, para probar): echo main > ~/.config/nanuk/user/channel
+# (o NANUK_CHANNEL=main). Si el canal aún no existe en el repo, se sigue main.
+nanuk_channel() {
+  local ch="${NANUK_CHANNEL:-}"
+  if [[ -z "$ch" && -f "$NANUK_CFG/user/channel" ]]; then
+    ch="$(head -n 1 "$NANUK_CFG/user/channel" | tr -d '[:space:]')"
+  fi
+  echo "${ch:-estable}"
+}
+
+# Commit al que apunta un canal en el repo local, tras un fetch (vacío si no existe).
+channel_commit() {
+  git -C "$REPO" rev-parse -q --verify "refs/tags/$1^{commit}" 2>/dev/null \
+    || git -C "$REPO" rev-parse -q --verify "refs/remotes/origin/$1^{commit}" 2>/dev/null \
+    || true
+}
+
+# Deja el repo en el commit del canal. reset y no pull: una etiqueta puede
+# moverse hacia delante o, si una versión salió mal, hacia atrás. Los cambios
+# locales ya se guardaron en un stash antes; el commit anterior queda en el reflog.
+update_repo() {
+  local ch target
+  ch="$(nanuk_channel)"
+  if ! git -C "$REPO" fetch --quiet --force --tags origin; then
+    warn "no se pudo consultar el repo de Nanuk (¿sin red?)"
+    return 0
+  fi
+  target="$(channel_commit "$ch")"
+  if [[ -z "$target" && "$ch" != main ]]; then
+    warn "el canal '$ch' aún no existe en el repo: se sigue main"
+    ch=main
+    target="$(channel_commit main)"
+  fi
+  if [[ -z "$target" ]]; then
+    warn "no encuentro el canal '$ch' ni main en el repo de Nanuk"
+  elif [[ "$(git -C "$REPO" rev-parse HEAD)" == "$target" ]]; then
+    say "Nanuk ya está en la última versión de '$ch'"
+  else
+    git -C "$REPO" merge-base --is-ancestor HEAD "$target" \
+      || warn "'$ch' apunta a una versión anterior a la tuya: se vuelve a ella"
+    git -C "$REPO" reset --quiet --hard "$target"
+    say "Nanuk → $ch: $(git -C "$REPO" log -1 --format='%h · %cs · %s')"
+  fi
+}
 
 # ── Detección de origen ────────────────────────────────────────────
 # Devuelve: repo | aur | flatpak | unknown
@@ -93,9 +144,9 @@ cmd_remove() {
   (( $# )) || die "uso: nanuk remove <paquete...>"
   for p in "$@"; do
     if pacman -Qq -- "$p" &>/dev/null; then
-      sudo pacman -Rns --noconfirm -- "$p"
+      sudo pacman -Rns --noconfirm -- "$p" || { warn "no se pudo quitar '$p' (¿otro paquete lo necesita? mira arriba)"; continue; }
     elif [[ "$p" == *.*.* ]] && flatpak info "$p" &>/dev/null; then
-      flatpak uninstall --user -y "$p"
+      flatpak uninstall --user -y "$p" || { warn "no se pudo quitar '$p'"; continue; }
     else
       warn "'$p' no parece instalado"
     fi
@@ -305,9 +356,9 @@ cmd_update() {
         warn "había cambios locales en $REPO: guardados con git stash"
       fi
     fi
-    git -C "$REPO" pull --ff-only || warn "no se pudo hacer pull (¿sin red?)"
-    # El pull puede haber cambiado este mismo script: el resto lo hace la
-    # versión nueva.
+    update_repo
+    # La versión nueva puede haber cambiado este mismo script: el resto lo hace
+    # ella.
     NANUK_UPDATE_REEXEC=1 exec bash "$REPO/bin/nanuk" update --no-pull
   fi
 
@@ -349,6 +400,10 @@ cmd_update() {
     bash "$REPO/install/05-desktop.sh" || warn "05-desktop falló; reintenta: bash $REPO/install/05-desktop.sh"
   fi
 
+  # La rueda de la barra repite su última consulta: tras actualizar queda vacía,
+  # sin volver a preguntar a internet.
+  : > "${XDG_CACHE_HOME:-$HOME/.cache}/nanuk-updates.txt" 2>/dev/null || true
+
   # Dentro de Hyprland: aplicar ya la config nueva y que la barra la relea.
   if command -v hyprctl &>/dev/null && hyprctl version &>/dev/null; then
     hyprctl reload >/dev/null || true
@@ -359,6 +414,123 @@ cmd_update() {
   echo
   echo "${B}Listo.${X}"
   check_restart "$log_start" "$from"
+}
+
+# ── ¿Hay actualizaciones? ─────────────────────────────────────────
+# Una línea por actualización pendiente: "<origen>\t<detalle>". No cambian nada.
+
+# Paquetes: checkupdates baja las bases de datos a una copia temporal (sin
+# root), yay pregunta al AUR y flatpak a flathub.
+pending_system() {
+  checkupdates 2>/dev/null | awk '{ print "sistema\t" $0 }' || true
+  if [[ -n "$AUR" ]]; then
+    "$AUR" -Qua 2>/dev/null | awk '{ print "AUR\t" $0 }' || true
+  fi
+  if command -v flatpak &>/dev/null; then
+    timeout 30 flatpak remote-ls --updates --user --columns=application 2>/dev/null \
+      | awk 'NF { print "flatpak\t" $1 }' || true
+  fi
+}
+
+# Nanuk: ¿se movió la bandera del canal? `git ls-remote` solo pregunta a qué
+# commit apunta cada etiqueta y rama (menos de 1 KB, no descarga nada). Solo si
+# cambió se hace fetch para listar los commits.
+pending_nanuk() {
+  local ch refs remote
+  ch="$(nanuk_channel)"
+  refs="$(timeout 15 git -C "$REPO" ls-remote --tags --heads origin 2>/dev/null)" || return 0
+  # Etiqueta anotada → su línea "^{}" es el commit; ligera → la propia etiqueta;
+  # si no hay etiqueta, rama con ese nombre; si no, main (como update_repo).
+  remote="$(awk -v t="refs/tags/$ch" -v h="refs/heads/$ch" '
+      $2 == t "^{}" { peeled = $1 }
+      $2 == t       { tag = $1 }
+      $2 == h       { head = $1 }
+      $2 == "refs/heads/main" { main = $1 }
+      END { print (peeled != "" ? peeled : tag != "" ? tag : head != "" ? head : main) }' <<<"$refs")"
+  [[ -n "$remote" && "$remote" != "$(git -C "$REPO" rev-parse HEAD 2>/dev/null)" ]] || return 0
+  if timeout 60 git -C "$REPO" fetch --quiet --force --tags origin 2>/dev/null \
+     && git -C "$REPO" merge-base --is-ancestor HEAD "$remote" 2>/dev/null; then
+    git -C "$REPO" log --format='Nanuk%x09%h %s' "HEAD..$remote" 2>/dev/null || true
+  else
+    printf 'Nanuk\tnueva versión en "%s" (%s)\n' "$ch" "${remote:0:7}"
+  fi
+}
+
+# Identificador de este arranque (cambia en cada encendido) y segundos desde
+# que se encendió (cuenta también el tiempo suspendido).
+boot_id()        { cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo desconocido; }
+uptime_seconds() { cut -d. -f1 /proc/uptime 2>/dev/null || echo 0; }
+
+# nanuk check          lista lo pendiente
+# nanuk check --json   para la rueda de waybar (texto vacío = la rueda no se ve)
+# nanuk check --ask    lo lista y pregunta si actualizar ya (clic en la rueda)
+cmd_check() {
+  local mode="${1:-}" list n summary age boot
+  local cache="${XDG_CACHE_HOME:-$HOME/.cache}/nanuk-updates.txt"
+  mkdir -p "$(dirname "$cache")"
+  boot="$(boot_id)"
+  if [[ "$mode" == --json ]]; then
+    # La barra llama cada 10 min, pero a internet se va UNA vez por arranque:
+    # una hora después de encender (no compite con el arranque ni gasta datos
+    # si solo enciendes un rato), y otra si la sesión pasa de 24 h (suspender y
+    # reanudar durante días). Sin red no se gasta el intento: se reintenta en
+    # la siguiente llamada. El resto del tiempo, lo guardado.
+    age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
+    if (( $(uptime_seconds) >= 3600 )) \
+       && { [[ "$(cat "$cache.boot" 2>/dev/null)" != "$boot" ]] || (( age >= 86400 )); } \
+       && timeout 5 getent hosts archlinux.org &>/dev/null; then
+      { pending_system; pending_nanuk; } > "$cache.tmp" && mv "$cache.tmp" "$cache"
+      echo "$boot" > "$cache.boot"
+    fi
+    # Lo guardado en un arranque anterior no se enseña: pudo actualizarse por otro lado.
+    if [[ "$(cat "$cache.boot" 2>/dev/null)" == "$boot" ]]; then
+      list="$(cat "$cache" 2>/dev/null)"
+    else
+      list=""
+    fi
+  else
+    echo "Buscando actualizaciones (repos, AUR, flatpak, Nanuk)..."
+    # Consulta al momento, y de paso la barra se queda con este resultado.
+    list="$(pending_system; pending_nanuk)"
+    printf '%s\n' "$list" > "$cache"
+    echo "$boot" > "$cache.boot"
+  fi
+  n="$(grep -c . <<<"$list" || true)"
+  summary="$(cut -f1 <<<"$list" | grep . | sort | uniq -c \
+             | awk '{ printf "%s%s %s", (NR > 1 ? " · " : ""), $2, $1 }' || true)"
+
+  if [[ "$mode" == --json ]]; then
+    (( n > 0 )) || { echo '{"text":""}'; return 0; }
+    # El tooltip de waybar es markup de Pango: "->" rompería sin escapar.
+    jq -cn --arg n "$n" --arg sum "$summary" --arg list "$list" '
+      def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
+      ($list | split("\n") | map(select(length > 0) | sub("\t"; ": ") | esc)) as $l
+      | { text: "󰒓", class: "available",
+          tooltip: ("\($n) actualizaciones  (\($sum))\n\n" + ($l[0:15] | join("\n"))
+                    + (if ($l | length) > 15 then "\n… y \(($l | length) - 15) más" else "" end)
+                    + "\n\nClic para actualizar") }'
+    return 0
+  fi
+
+  if (( n == 0 )); then
+    echo "✔ Todo al día."
+  else
+    echo
+    echo "${B}$n actualizaciones${X}  ($summary)"
+    column -t -s $'\t' <<<"$list" | sed 's/^/  /'
+  fi
+  [[ "$mode" == --ask ]] || return 0
+
+  # --ask: la terminal flotante que abre la rueda de la barra.
+  export GUM_CONFIRM_SELECTED_BACKGROUND="#9fd8ff" GUM_CONFIRM_SELECTED_FOREGROUND="#000000" \
+         GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e"
+  echo
+  if (( n > 0 )) && gum confirm "¿Actualizar el sistema ahora?" --affirmative "Actualizar ahora" --negative "Más tarde"; then
+    # En otro proceso: update se relanza a sí mismo tras el pull (exec).
+    bash "$REPO/bin/nanuk" update || warn "la actualización terminó con errores (mira arriba)"
+  fi
+  echo
+  read -rsn1 -p "Pulsa una tecla para cerrar " || true
 }
 
 cmd_theme() {
@@ -494,31 +666,51 @@ menu_install() {
   cmd_install $picks || true
 }
 
-# Quitar: lo que está instalado a propósito (pacman -Qe) + tus flatpaks. Lo
-# que viene con Nanuk sale marcado y pide una confirmación más seria.
+# Quitar: TODOS los paquetes instalados (+ tus flatpaks), con su versión y si
+# viene con Nanuk o es una dependencia (sin marca = lo instalaste tú). Espacio
+# (o Tab) marca varios. Lo que viene con Nanuk pide una confirmación más seria.
 menu_remove() {
-  local picks core
+  local picks core p n
+  local -a pkgs=() fps=()
   picks="$(
     {
-      pacman -Qeq | awk -v list="$(nanuk_packages | paste -sd,)" '
-        BEGIN { n = split(list, a, ","); for (i = 1; i <= n; i++) nanuk[a[i]] = 1 }
-        { printf "%s\t%s\n", $1, (($1 in nanuk) ? "viene con Nanuk" : "") }'
+      awk 'FILENAME == ARGV[1] { nanuk[$1] = 1; next }
+           FILENAME == ARGV[2] { mine[$1] = 1; next }
+           { printf "%-34s\t%-24s %s\n", $1, $2, (($1 in nanuk) ? "viene con Nanuk" : ($1 in mine) ? "" : "dependencia") }' \
+        <(nanuk_packages) <(pacman -Qeq) <(pacman -Q)
       command -v flatpak &>/dev/null \
-        && flatpak list --user --app --columns=application 2>/dev/null | awk 'NF { printf "%s\tflatpak\n", $1 }'
-    } | fzf "${FZF_NANUK[@]}" --multi --delimiter='\t' --nth=1 \
-          --header='Quitar · Tab marca varios · Enter quita · Esc vuelve' \
-          --preview='pacman -Qi {1} 2>/dev/null || flatpak info {1} 2>/dev/null' \
-      | cut -f1
+        && flatpak list --user --app --columns=application 2>/dev/null \
+           | awk 'NF { printf "%-34s\t%-24s %s\n", $1, "", "flatpak" }'
+    } | fzf "${FZF_NANUK[@]}" --multi --delimiter='\t' --nth=1 --bind='space:toggle+down' \
+          --header='Quitar · Espacio marca varios · escribe para buscar · Enter quita · Esc vuelve' \
+          --preview='p=$(echo {1} | tr -d " "); pacman -Qi "$p" 2>/dev/null || flatpak info "$p" 2>/dev/null' \
+      | cut -f1 | awk '{ print $1 }'
   )" || true
   [[ -n "$picks" ]] || return 0
+  n="$(grep -c . <<<"$picks")"
   core="$(grep -xF -f <(nanuk_packages) <<<"$picks" || true)"
   if [[ -n "$core" ]]; then
-    gum confirm "Vienen con Nanuk y quitarlos puede romper el escritorio: $(paste -sd' ' <<<"$core"). ¿Quitar igualmente?" || return 0
+    gum confirm "Vienen con Nanuk y quitarlos puede romper el escritorio: $(paste -sd' ' <<<"$core"). ¿Quitar igualmente los $n?" || return 0
   else
-    gum confirm "¿Quitar $(paste -sd' ' <<<"$picks")?" || return 0
+    gum confirm "¿Quitar $n: $(paste -sd' ' <<<"$picks")?" || return 0
   fi
-  # shellcheck disable=SC2086
-  cmd_remove $picks || true
+
+  while read -r p; do
+    if pacman -Qq -- "$p" &>/dev/null; then pkgs+=("$p"); else fps+=("$p"); fi
+  done <<<"$picks"
+  if (( ${#pkgs[@]} )); then
+    # Todos en UNA operación: pacman resuelve las dependencias entre ellos
+    # (una app y la librería que solo usa ella se van juntas; de una en una,
+    # la librería fallaría). Si otro paquete aún necesita alguno, no quita
+    # nada y lo explica.
+    if sudo pacman -Rns --noconfirm -- "${pkgs[@]}"; then
+      for p in "${pkgs[@]}"; do unrecord "$p"; unrecord "$p:aur"; done
+      say "quitados: ${pkgs[*]}"
+    else
+      warn "no se quitó nada: arriba pacman dice qué paquete todavía necesita alguno de los elegidos"
+    fi
+  fi
+  if (( ${#fps[@]} )); then cmd_remove "${fps[@]}" || true; fi
 }
 
 # Añadir fondo: tus imágenes de Imágenes, Descargas y Escritorio (las más
@@ -726,6 +918,7 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk sync                   instala todo lo de tu lista (máquina nueva)
   nanuk update                 actualiza Nanuk (git pull), sistema, AUR, flatpak,
                                instala los paquetes nuevos de Nanuk y re-despliega la config
+  nanuk check [--ask]          ¿hay actualizaciones? --ask pregunta si actualizar (rueda de la barra)
   nanuk webapp add "Nombre" <url>   crea una app web (Brave, ventana propia) en tu capa
   nanuk webapp remove <nombre> | list
   nanuk menu                   menú con buscador: paquetes, tema, fondo, actualizar (Super+Shift+I)
@@ -748,6 +941,7 @@ case "$cmd" in
   list|ls)     cmd_list ;;
   sync)        cmd_sync ;;
   update|up)   cmd_update "$@" ;;
+  check)       cmd_check "$@" ;;
   theme)       cmd_theme "$@" ;;
   bg|background) exec "$REPO/bin/nanuk-bg" "$@" ;;
   webapp|web)  cmd_webapp "$@" ;;

@@ -3,7 +3,7 @@
 
 * {
   font-family: "CaskaydiaMono Nerd Font", monospace;
-  font-size: 12px;
+  font-size: 14px;
   border: none;
   border-radius: 0;
   min-height: 0;
@@ -63,6 +63,12 @@ tooltip label { color: #ffffff; }
   padding: 0 12px 0 0;
   color: #b0b0b0;
 }
+/* Rueda de actualizaciones: blanca (el clima es gris) para que se note. */
+#custom-updates {
+  padding: 0 12px 0 0;
+  color: #ffffff;
+}
+#custom-updates:hover { background: #141414; }
 
 /* ── Derecha ────────────────────────────────────────────────── */
 #network,

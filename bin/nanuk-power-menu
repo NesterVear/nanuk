@@ -3,7 +3,7 @@
 set -euo pipefail
 
 choice=$(printf '%s\n' "Bloquear" "Suspender" "Cerrar sesión" "Reiniciar" "Apagar" \
-  | fuzzel --dmenu --prompt "energía ❯ " --width 24 --lines 5 --minimal-lines)
+  | fuzzel --dmenu --prompt "energía ❯ " --width 28 --lines 5 --minimal-lines)
 
 case "$choice" in
   "Bloquear")       hyprlock ;;

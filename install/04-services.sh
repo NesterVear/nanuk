@@ -74,7 +74,10 @@ fi
 # ── MariaDB (solo si se instaló desde extras.txt) ───────────────────
 # Por defecto Nanuk NO trae base de datos nativa: van en Docker, y así el
 # puerto 3306 queda libre para los contenedores de tus proyectos.
-if command -v mariadb-install-db &>/dev/null; then
+# Solo con NANUK_EXTRAS=1: que MariaDB esté instalado no basta (en una máquina
+# que venía de Omarchy puede estar instalado y apagado a propósito, y encenderlo
+# ocupaba el 3306 de los contenedores).
+if [[ "${NANUK_EXTRAS:-0}" == "1" ]] && command -v mariadb-install-db &>/dev/null; then
 if [[ ! -d /var/lib/mysql/mysql ]]; then
   echo "→ Inicializando MariaDB..."
   sudo mariadb-install-db --user=mysql --basedir=/usr --datadir=/var/lib/mysql
