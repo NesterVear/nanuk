@@ -31,7 +31,11 @@ echo
 # actualiza todo igualmente, así que aquí no cuesta nada más.
 if ! command -v git &>/dev/null; then
   echo "→ Instalando git..."
-  sudo pacman -Syu --noconfirm --needed git
+  # OMARCHY_ALLOW_DIRECT_PACMAN=1: en una máquina que viene de Omarchy, su hook
+  # 00-omarchy-update-guard aborta todo `pacman -Syu` que no lance `omarchy update`.
+  # `env` hace que la variable llegue a pacman a través de sudo. En Arch sin
+  # Omarchy nadie la lee.
+  sudo env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -Syu --noconfirm --needed git
 fi
 
 if [[ -d "$NANUK_DIR/.git" ]]; then

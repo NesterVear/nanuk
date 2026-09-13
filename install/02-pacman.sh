@@ -37,7 +37,11 @@ grep -q '^ILoveCandy' /etc/pacman.conf \
   || sudo sed -i '/^\[options\]/a ILoveCandy' /etc/pacman.conf
 
 echo "→ Actualizando el sistema..."
-sudo pacman -Syu --noconfirm
+# OMARCHY_ALLOW_DIRECT_PACMAN=1: en una máquina que viene de Omarchy, su hook
+# 00-omarchy-update-guard aborta todo `pacman -Syu` que no lance `omarchy update`.
+# `env` hace que la variable llegue a pacman a través de sudo. En Arch sin
+# Omarchy nadie la lee.
+sudo env OMARCHY_ALLOW_DIRECT_PACMAN=1 pacman -Syu --noconfirm
 
 echo "→ Instalando base-devel..."
 sudo pacman -S --noconfirm --needed base-devel git
