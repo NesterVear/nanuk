@@ -149,6 +149,15 @@ questions() {
   [[ -n "$tz_guess" && -f "/usr/share/zoneinfo/$tz_guess" ]] || tz_guess="UTC"
   TIMEZONE="$(timedatectl list-timezones | gum filter --header "Zona horaria (Enter acepta la sugerida)" --value "$tz_guess")"
 
+  step "Kernel"
+  # La primera palabra de la opción es el nombre del paquete.
+  local k
+  k="$(choose "Kernel de Linux" \
+    "linux           el más reciente (recomendado)" \
+    "linux-lts       soporte largo: cambia menos; útil si tu hardware falla con el último" \
+    "linux-hardened  parches de seguridad extra; algo más lento y alguna app con sandbox puede fallar")"
+  KERNEL="${k%% *}"
+
   step "Equipo y usuario"
   HOSTNAME_="$(ask "Nombre del equipo" --value nanuk)"
   while :; do
@@ -286,6 +295,7 @@ summary() {
     echo "Teclado|$KEYMAP"
     echo "Idioma|$LOCALE"
     echo "Zona horaria|$TIMEZONE"
+    echo "Kernel|$KERNEL"
     echo "Equipo|$HOSTNAME_"
     echo "Usuario|$USERNAME (sudo)"
     [[ -n "$WIPE_DISK" ]] && echo "Disco|$WIPE_DISK  ← SE BORRA ENTERO"
@@ -388,7 +398,7 @@ install_base() {
   # Solo lo necesario para arrancar y tener red: el resto lo instala
   # install/03-packages.sh de Nanuk desde sus listas.
   # binutils: mkinitcpio construye la UKI con objcopy y `base` no lo trae.
-  local pkgs=(base linux linux-firmware mkinitcpio binutils limine efibootmgr sudo networkmanager git curl nano e2fsprogs dosfstools)
+  local pkgs=(base "$KERNEL" linux-firmwaremkinitcpio binutils limine efibootmgr sudo networkmanager git curl nano e2fsprogs dosfstools)
   [[ -n "$ucode" ]] && pkgs+=("$ucode")
   [[ "$FS" == btrfs ]] && pkgs+=(btrfs-progs)
   (( ENCRYPT || HOME_LUKS )) && pkgs+=(cryptsetup)
@@ -422,7 +432,7 @@ configure_system() {
 
   # Todo lo que el chroot necesita saber, en un archivo que se borra al final.
   {
-    declare -p KEYMAP LOCALE TIMEZONE HOSTNAME_ USERNAME PASSWORD cmdline hooks efi_disk efi_num HOME_LUKS
+    declare -p KEYMAP LOCALE TIMEZONE KERNEL HOSTNAME_ USERNAME PASSWORD cmdline hooks efi_disk efi_num HOME_LUKS
     [[ -n "$HOME_PART" ]] && (( HOME_LUKS )) && echo "HOME_UUID='$(blkid -s UUID -o value "$HOME_PART")'"
   } > "$MNT/root/nanuk.env"
   chmod 600 "$MNT/root/nanuk.env"
@@ -456,7 +466,7 @@ systemctl enable NetworkManager systemd-timesyncd >/dev/null
 # las UKI: no hay que tocarlo al actualizar el kernel.
 mkdir -p /boot/EFI/Linux /boot/EFI/BOOT
 cp /usr/share/limine/BOOTX64.EFI /boot/EFI/BOOT/BOOTX64.EFI
-cat > /boot/limine.conf <<'EOL'
+cat > /boot/limine.conf <<EOL
 timeout: 3
 interface_branding: Nanuk
 interface_branding_color: 6
@@ -464,11 +474,11 @@ hash_mismatch_panic: no
 
 /Nanuk
     protocol: efi
-    path: boot():/EFI/Linux/nanuk-linux.efi
+    path: boot():/EFI/Linux/nanuk-$KERNEL.efi
 
 /Nanuk (initramfs de emergencia)
     protocol: efi
-    path: boot():/EFI/Linux/nanuk-linux-fallback.efi
+    path: boot():/EFI/Linux/nanuk-$KERNEL-fallback.efi
 EOL
 mkdir -p /etc/pacman.d/hooks
 cat > /etc/pacman.d/hooks/99-nanuk-limine.hook <<'EOH'
@@ -494,13 +504,15 @@ bootnum="$(efibootmgr 2>/dev/null | awk '/^Boot[0-9A-Fa-f]{4}\*? Nanuk/ { print 
 # El hook plymouth lo añade después 05-desktop.sh. Necesita objcopy (binutils).
 sed -i "s|^HOOKS=.*|HOOKS=($hooks)|" /etc/mkinitcpio.conf
 echo "$cmdline" > /etc/kernel/cmdline
-cat > /etc/mkinitcpio.d/linux.preset <<'EOP'
+# El preset se llama como el paquete del kernel (linux, linux-lts, linux-hardened):
+# así sustituye al que el paquete dejó al instalarse.
+cat > "/etc/mkinitcpio.d/$KERNEL.preset" <<EOP
 # mkinitcpio preset: kernel + initramfs + cmdline en una sola imagen UEFI (UKI).
 # Se regenera sola con cada actualización del kernel (hook de pacman).
-ALL_kver="/boot/vmlinuz-linux"
+ALL_kver="/boot/vmlinuz-$KERNEL"
 PRESETS=('default' 'fallback')
-default_uki="/boot/EFI/Linux/nanuk-linux.efi"
-fallback_uki="/boot/EFI/Linux/nanuk-linux-fallback.efi"
+default_uki="/boot/EFI/Linux/nanuk-$KERNEL.efi"
+fallback_uki="/boot/EFI/Linux/nanuk-$KERNEL-fallback.efi"
 fallback_options="-S autodetect"
 EOP
 mkinitcpio -P
@@ -515,7 +527,7 @@ CHROOT
 
   # Comprobar que lo que arranca existe de verdad antes de seguir.
   local f
-  for f in EFI/BOOT/BOOTX64.EFI EFI/Linux/nanuk-linux.efi limine.conf; do
+  for f in EFI/BOOT/BOOTX64.EFI "EFI/Linux/nanuk-$KERNEL.efi" limine.conf; do
     [[ -s "$MNT/boot/$f" ]] || die "falta /boot/$f en el sistema instalado: el arranque no está completo (mira $LOG)"
   done
   say "arranque: Limine → UKI en /boot/EFI/Linux/ ✔"
