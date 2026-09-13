@@ -505,7 +505,7 @@ cmd_check() {
     jq -cn --arg n "$n" --arg sum "$summary" --arg list "$list" '
       def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
       ($list | split("\n") | map(select(length > 0) | sub("\t"; ": ") | esc)) as $l
-      | { text: "󰒓", class: "available",
+      | { text: "󰓦", class: "available",
           tooltip: ("\($n) actualizaciones  (\($sum))\n\n" + ($l[0:15] | join("\n"))
                     + (if ($l | length) > 15 then "\n… y \(($l | length) - 15) más" else "" end)
                     + "\n\nClic para actualizar") }'

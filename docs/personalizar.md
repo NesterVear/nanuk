@@ -90,6 +90,12 @@ de **14 px** (`font-size` en `waybar/style.css`); el launcher, el menú de
 energía (`SUPER + ESC`) y la chuleta de atajos usan **13** (`font=` en
 `fuzzel/fuzzel.ini`, y el ancho `width` va en caracteres, así que crece con la letra).
 
+Cada pantalla enseña en la barra solo sus propios workspaces; clic en uno para
+ir a él. Si el clic no hace nada, tienes Waybar 0.15.0 con Hyprland 0.56 (la
+0.15.0 aún no habla el formato nuevo de Hyprland). Se arregla solo con la
+siguiente versión de Waybar; mientras, puedes instalar la de desarrollo:
+`yay -S waybar-git` (sustituye a `waybar`) y reiniciar la barra.
+
 ### Apps web (Tidal, WhatsApp, ChatGPT… en ventana propia)
 
 `nanuk-webapp <url> [--focus]` abre la URL en Brave Origin en modo app (sin
@@ -131,9 +137,9 @@ izquierda de la barra. Un menú en una terminal flotante (`gum` + `fzf`) con:
 - **Actualizar el sistema**, **cambiar el tema**, **cambiar el fondo**, apps
   web, lenguajes y el diagnóstico.
 
-### La rueda de actualizaciones (barra)
+### El icono de actualizaciones (barra)
 
-Junto al clima aparece una rueda (󰒓) **solo cuando hay algo que actualizar**:
+Junto al clima aparece el icono de actualizar (󰓦) **solo cuando hay algo que actualizar**:
 repos oficiales, AUR, flatpak o commits nuevos de Nanuk. Pasa el ratón por
 encima para ver la lista; clic → una terminal flotante la muestra y pregunta
 si actualizar ahora (`nanuk update`). Se consulta internet **una vez por
@@ -299,9 +305,9 @@ queda en `~/.local/state/nanuk/swaybg.log`.
 `nanuk theme` lista los temas; `nanuk theme <nombre>` cambia. Cada tema vive en
 `~/.config/nanuk/themes/<nombre>/` (`colors.toml`, `hyprland.lua`, `wordmark.*`).
 
-> Hoy `themes/` se reemplaza entero en cada update: un tema propio debe
-> añadirse **en el repo**, no en `~/.config/nanuk/themes/`. Un `user/themes/`
-> que sobreviva a los updates está en el plan (Fase 3/7).
+> `themes/` se reemplaza entero en cada update: un tema propio se perdería si lo
+> pones en `~/.config/nanuk/themes/`. De momento, los temas nuevos se añaden al
+> repo de Nanuk.
 
 ---
 
@@ -325,7 +331,7 @@ queda en `~/.local/state/nanuk/swaybg.log`.
 | `~/.local/share/nanuk` (el repo)      | Pasa a la versión `estable` (o la de `user/channel`); si lo editaste, tus cambios quedan en `git stash` |
 | Arranque: splash, autologin, PAM/keyring (paso 05) | Solo si cambió en la versión nueva (`install/05-desktop.sh` o el tema Plymouth); no cambia tu navegador ni tu gestor de archivos por defecto |
 | Servicios (paso 04: docker, libvirt…) | No se vuelve a ejecutar                     |
-| Rueda de la barra                     | Se vacía (ya no hay nada pendiente)           |
+| Icono de actualizaciones de la barra  | Se vacía (ya no hay nada pendiente)           |
 
 Si alguna vez encuentras algo tuyo con sufijo `.bak.<timestamp>`, es que
 Nanuk lo encontró donde esperaba poner un enlace y lo apartó en vez de borrarlo.

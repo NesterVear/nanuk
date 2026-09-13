@@ -3,3 +3,7 @@ iso/out/
 iso/work/
 # Copia del repo que build.sh mete en la ISO (se regenera en cada build)
 iso/airootfs/usr/local/share/nanuk/
+# Documentación interna: no se publica
+/interno/
+/CLAUDE.md
+/PLAN.md

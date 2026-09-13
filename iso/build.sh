@@ -26,9 +26,11 @@ command -v mkarchiso &>/dev/null || { echo "✖ falta archiso: pacman -S archiso
 
 echo "→ copiando el repo a la ISO ($PAYLOAD)"
 mkdir -p "$PAYLOAD"
-# Fuera: la propia iso/ (recursivo), salidas de builds, la maqueta de diseño y la web.
+# Fuera: la propia iso/ (recursivo), salidas de builds, la maqueta de diseño, la
+# web y la documentación interna (la ISO es pública).
 rsync -a --delete "$REPO/" "$PAYLOAD/" \
-  --exclude /iso --exclude /design --exclude /site --exclude '*.pkg.tar.zst'
+  --exclude /iso --exclude /design --exclude /site --exclude '*.pkg.tar.zst' \
+  --exclude /interno --exclude /CLAUDE.md --exclude /PLAN.md
 # Si el repo se construye desde una copia sin remoto, que el sistema instalado
 # apunte a GitHub igualmente.
 git -C "$PAYLOAD" remote set-url origin https://github.com/nestervear/nanuk.git 2>/dev/null || true

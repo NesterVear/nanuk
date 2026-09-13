@@ -16,8 +16,10 @@ fail() {
 #    Vale Arch puro (ID=arch) y sus derivadas que siguen siendo Arch por
 #    debajo, como Omarchy (ID=omarchy, ID_LIKE=arch): así funciona la
 #    migración sin reinstalar (install/from-omarchy.sh).
+#    /etc/arch-release (del paquete filesystem) también vale: hay quien cambia
+#    os-release a otra distro para que un programa de terceros se instale.
 source /etc/os-release
-[[ "$ID" == "arch" || " ${ID_LIKE:-} " == *" arch "* ]] \
+[[ "$ID" == "arch" || " ${ID_LIKE:-} " == *" arch "* || -f /etc/arch-release ]] \
   || fail "Esto no es Arch Linux ni una derivada (ID=$ID). Nanuk solo se instala sobre Arch."
 
 # 2. ¿NO somos root? Se instala como usuario normal; sudo se usa puntualmente.
