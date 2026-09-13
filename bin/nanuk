@@ -15,7 +15,7 @@
 #   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
 #   nanuk menu                   menú: buscar/quitar paquetes, tema, fondo, actualizar...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
-#   nanuk bg [<fondo>|next|none]  fondo de pantalla: lista, cambia, rota, negro puro
+#   nanuk bg [<fondo>|add <img>|next|none]  fondo de pantalla: lista, cambia, añade, rota, negro puro
 #   nanuk edit                   abre tu capa de config en $EDITOR
 #   nanuk doctor                 diagnóstico rápido del sistema
 #   nanuk help
@@ -512,6 +512,39 @@ menu_remove() {
   cmd_remove $picks || true
 }
 
+# Añadir fondo: tus imágenes de Imágenes, Descargas y Escritorio (las más
+# nuevas primero) con la imagen de verdad en la vista previa: kitty la dibuja
+# dentro de fzf (protocolo gráfico de kitty; en otra terminal, solo medidas).
+# Si escribes o pegas una ruta que no está en la lista, Enter añade esa.
+menu_add_background() {
+  local d pick preview
+  local -a dirs=()
+  for d in "$(xdg-user-dir PICTURES 2>/dev/null)" "$(xdg-user-dir DOWNLOAD 2>/dev/null)" \
+           "$(xdg-user-dir DESKTOP 2>/dev/null)" "$HOME/Imágenes" "$HOME/Descargas"; do
+    # xdg-user-dir devuelve $HOME si la carpeta no está definida: no buscar en todo el home.
+    [[ -n "$d" && "$d" != "$HOME" && -d "$d" ]] || continue
+    d="$(readlink -f "$d")"
+    [[ " ${dirs[*]} " == *" $d "* ]] || dirs+=("$d")   # ~/Pictures e ~/Imágenes pueden ser la misma
+  done
+  if [[ -n "${KITTY_WINDOW_ID:-}" ]] && command -v kitten &>/dev/null; then
+    # --unconditional: fzf captura la salida (no es una tty). Se quita la
+    # última línea para que la imagen no haga scroll, y se resetea el color.
+    preview='kitten icat --clear --transfer-mode=memory --unconditional --unicode-placeholder --stdin=no --place="${FZF_PREVIEW_COLUMNS}x${FZF_PREVIEW_LINES}@0x0" {} | sed "\$d"; printf "\033[m"'
+  else
+    preview='magick identify -format "%w x %h px  %m\n" {} 2>/dev/null; du -h {} | cut -f1'
+  fi
+  pick="$(
+    { (( ${#dirs[@]} )) && find "${dirs[@]}" -maxdepth 3 -type f \
+        \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) \
+        -printf '%T@\t%p\n' 2>/dev/null | sort -rn | cut -f2-; } \
+      | fzf "${FZF_NANUK[@]}" --tiebreak=index \
+            --header='Añadir fondo · escribe para filtrar o pega una ruta · Enter lo añade y lo activa · Esc vuelve' \
+            --preview="$preview" --bind='enter:accept-or-print-query'
+  )" || true
+  [[ -n "$pick" ]] || return 0
+  "$REPO/bin/nanuk-bg" add "${pick/#\~/$HOME}" || true
+}
+
 cmd_menu() {
   command -v gum &>/dev/null || die "falta 'gum' (está en base.txt): sudo pacman -S gum"
   command -v fzf &>/dev/null || die "falta 'fzf' (está en base.txt): sudo pacman -S fzf"
@@ -529,6 +562,7 @@ cmd_menu() {
       "Actualizar el sistema" \
       "Cambiar el tema" \
       "Cambiar el fondo de pantalla" \
+      "Añadir una imagen de fondo" \
       "Añadir una app web (nombre + URL)" \
       "Quitar una app web" \
       "Instalar un lenguaje" \
@@ -555,6 +589,7 @@ cmd_menu() {
               | gum choose --header "fondo de pantalla (los tuyos van en ~/.config/nanuk/user/backgrounds/)")" || continue
         [[ -n "$bg" ]] || continue
         "$REPO/bin/nanuk-bg" "${bg%%  *}" || true ;;
+      "Añadir una imagen de fondo") menu_add_background ;;
       "Añadir una app web (nombre + URL)")
         local name url
         name="$(gum input --placeholder "Nombre (p. ej. YouTube)")" || continue
@@ -687,6 +722,7 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk menu                   menú con buscador: paquetes, tema, fondo, actualizar (Super+Shift+I)
   nanuk theme [<tema>]         lista temas / cambia el activo
   nanuk bg [<fondo>|next|none] fondo de pantalla: lista / cambia / rota (Super+Shift+B) / negro puro
+  nanuk bg add <imagen>        copia una imagen tuya a user/backgrounds/ y la pone de fondo
   nanuk lang [<lenguaje...>]   instala/lista lenguajes (rust node python go php r ...)
   nanuk keys                   chuleta de atajos de teclado (también Super+K)
   nanuk edit                   abre tu capa de config (~/.config/nanuk/user) en $EDITOR

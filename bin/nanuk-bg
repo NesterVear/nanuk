@@ -11,6 +11,7 @@
 #
 #   nanuk-bg               lista los fondos (● = activo)
 #   nanuk-bg <nombre|ruta> activa uno: 3, 3.jpg, mi-foto o /ruta/a/imagen.png
+#   nanuk-bg add <imagen>  la copia a user/backgrounds/ y la activa
 #   nanuk-bg next          el siguiente de la lista (SUPER + SHIFT + B)
 #   nanuk-bg none          negro puro, sin imagen
 #   nanuk-bg apply         pinta el fondo elegido (lo llama el autostart)
@@ -188,6 +189,31 @@ cmd_set() {
   fi
 }
 
+# Copia imágenes tuyas a user/backgrounds/ (ahí nunca las toca un update) y
+# activa la última. El nombre se limpia (espacios y raros → -) para poder
+# escribirlo luego en `nanuk bg <nombre>`. Nunca pisa otra imagen con el mismo
+# nombre: si es la misma imagen la reutiliza, si no, añade -2, -3...
+cmd_add() {
+  (( $# )) || die "uso: nanuk bg add <imagen...>  (jpg, png o webp)"
+  local dir="$CFG/user/backgrounds" src name base ext dest n last=""
+  mkdir -p "$dir"
+  for src in "$@"; do
+    [[ -f "$src" ]] || die "no existe: $src"
+    name="$(basename "$src")"; ext="${name##*.}"; ext="${ext,,}"; base="${name%.*}"
+    case "$ext" in jpg|jpeg|png|webp) ;; *) die "solo jpg, png o webp: $name" ;; esac
+    base="$(printf '%s' "$base" | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-*//; s/-*$//')"
+    base="${base:-fondo}"
+    dest="$dir/$base.$ext"; n=1
+    while [[ -e "$dest" ]] && ! cmp -s "$src" "$dest"; do
+      n=$((n + 1)); dest="$dir/$base-$n.$ext"
+    done
+    [[ -e "$dest" ]] || cp -- "$src" "$dest"
+    say "añadido a tus fondos: $(basename "$dest")"
+    last="$dest"
+  done
+  cmd_set "$last"
+}
+
 cmd_next() {
   local -a list; mapfile -t list < <(backgrounds)
   (( ${#list[@]} )) || die "no hay fondos en el tema ni en user/backgrounds/"
@@ -222,9 +248,10 @@ cmd_names() {
 case "${1:-list}" in
   list)   cmd_list ;;
   names)  cmd_names ;;
+  add)    shift; cmd_add "$@" ;;
   next)   cmd_next ;;
   apply)  cmd_apply ;;
   path)   bg="$(current)"; [[ "$bg" != none ]] && echo "$bg" || true ;;
-  help|-h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' ;;
+  help|-h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//' ;;
   *)      cmd_set "$1" ;;
 esac

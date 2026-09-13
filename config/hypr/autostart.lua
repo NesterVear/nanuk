@@ -8,7 +8,12 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("dbus-update-activation-environment --systemd --all")
 
   -- "Pantalla de inicio de sesión": hyprlock nada más entrar (ver helpers.lua).
-  if n.lock_on_start then
+  -- En "auto" decide el shell: lsblk -s recorre de / hacia sus discos padre
+  -- y, si alguno es crypto_LUKS, ya pediste contraseña en el arranque.
+  -- (findmnt -v quita el [/@] de los subvolúmenes btrfs.)
+  if n.lock_on_start == "auto" then
+    hl.exec_cmd('lsblk -snlo FSTYPE "$(findmnt -nvo SOURCE /)" | grep -qx crypto_LUKS || ' .. n.launch("hyprlock"))
+  elseif n.lock_on_start then
     hl.exec_cmd(n.launch("hyprlock"))
   end
 

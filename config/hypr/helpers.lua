@@ -26,12 +26,15 @@ n.apps = {
 }
 
 -- ── Opciones de sesión ──────────────────────────────────────────────
--- Nanuk entra por autologin y bloquea al momento con hyprlock: ves el
--- wordmark y el campo de contraseña, como una pantalla de inicio de sesión,
--- pero sin display manager. Esa contraseña también abre el keyring (PAM).
--- Para entrar directo sin contraseña: en user/hypr/autostart.lua,
---   n.lock_on_start = false
-n.lock_on_start = true
+-- Nanuk entra por autologin. Con "auto", hyprlock bloquea nada más entrar
+-- (wordmark + contraseña, como una pantalla de inicio de sesión, sin display
+-- manager; esa contraseña abre también el keyring por PAM)... salvo que `/`
+-- esté cifrado con LUKS: entonces la contraseña del disco que tecleas en el
+-- arranque YA es el inicio de sesión, y pedirla otra vez sería un bloqueo doble.
+-- Para forzarlo, en user/hypr/autostart.lua:
+--   n.lock_on_start = true    -- siempre, aunque el disco esté cifrado
+--   n.lock_on_start = false   -- nunca: directo al escritorio
+n.lock_on_start = "auto"
 
 -- ── Utilidades ──────────────────────────────────────────────────────
 

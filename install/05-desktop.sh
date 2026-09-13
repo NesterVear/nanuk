@@ -166,6 +166,22 @@ if [[ ! -f /etc/pam.d/hyprlock ]]; then
   echo "✔ /etc/pam.d/hyprlock creado"
 fi
 
+# Con / cifrado (LUKS) no hay hyprlock al entrar (n.lock_on_start = "auto":
+# la contraseña del disco ya es el inicio de sesión), así que nadie abriría
+# el keyring "login" y cada app lo pediría. En ese caso, igual que Omarchy,
+# el keyring por defecto va sin contraseña propia: lo protege el cifrado del
+# disco. Solo si aún no tienes ningún keyring (nunca se toca uno existente).
+KEYRINGS="$HOME/.local/share/keyrings"
+if lsblk -snlo FSTYPE "$(findmnt -nvo SOURCE /)" 2>/dev/null | grep -qx crypto_LUKS \
+   && ! compgen -G "$KEYRINGS/*.keyring" >/dev/null; then
+  install -d -m 700 "$KEYRINGS"
+  printf '[keyring]\ndisplay-name=Default keyring\nctime=0\nmtime=0\nlock-on-idle=false\nlock-after=false\n' \
+    > "$KEYRINGS/Default_keyring.keyring"
+  chmod 600 "$KEYRINGS/Default_keyring.keyring"
+  echo Default_keyring > "$KEYRINGS/default"
+  echo "✔ keyring sin contraseña propia (disco cifrado)"
+fi
+
 # ── 3. Apps por defecto ─────────────────────────────────────────────
 # xdg-settings/xdg-mime escriben en ~/.config/mimeapps.list. El primero que
 # exista gana; el usuario lo cambia luego con `xdg-settings set ...`.

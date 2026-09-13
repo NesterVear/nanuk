@@ -7,6 +7,7 @@
 -- n.launch_on_start("hyprsunset -t 4000")   -- luz nocturna siempre
 
 -- Pantalla de inicio de sesión: Nanuk bloquea con hyprlock nada más entrar
--- (wordmark + contraseña; esa contraseña abre también el keyring).
--- Para entrar directo, sin contraseña:
--- n.lock_on_start = false
+-- (wordmark + contraseña; esa contraseña abre también el keyring), salvo si
+-- el disco está cifrado: ahí ya tecleaste la contraseña al arrancar.
+-- n.lock_on_start = false   -- nunca: directo al escritorio
+-- n.lock_on_start = true    -- siempre, aunque el disco esté cifrado

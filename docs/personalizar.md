@@ -197,8 +197,17 @@ activa a flotante mediana y centrada, o la devuelve al mosaico.
 Nanuk entra por autologin y **bloquea al momento con hyprlock**: ves el
 wordmark y el campo de contraseña como si fuera una pantalla de inicio de
 sesión, sin display manager. Esa misma contraseña abre el keyring de GNOME
-(Brave, VS Code…), así no vuelve a preguntar. Para entrar directo:
-`n.lock_on_start = false` en `~/.config/nanuk/user/hypr/autostart.lua`.
+(Brave, VS Code…), así no vuelve a preguntar.
+
+**Con el disco cifrado (LUKS)** la contraseña ya la tecleas en el arranque,
+en la pantalla de Nanuk, así que hyprlock no vuelve a salir: entras directo al
+escritorio. El instalador crea en ese caso un keyring sin contraseña propia
+(lo protege el cifrado del disco, como en Omarchy). Si ya tenías un keyring
+con contraseña, las apps la pedirán una vez al abrirlo.
+
+Para cambiarlo, en `~/.config/nanuk/user/hypr/autostart.lua`:
+`n.lock_on_start = false` (nunca bloquear al entrar) o `true` (siempre, aunque
+el disco esté cifrado).
 
 ### Entradas que no quieres ver en el launcher
 
@@ -230,8 +239,17 @@ nanuk bg next         # el siguiente de la lista; también SUPER + SHIFT + B
 ```
 
 Tus propias imágenes van en `~/.config/nanuk/user/backgrounds/` (jpg, png o
-webp, mejor sin espacios en el nombre) y aparecen en la lista con su nombre:
-`nanuk bg mi-foto`. También desde `nanuk menu` → "Cambiar el fondo de pantalla".
+webp) y aparecen en la lista con su nombre: `nanuk bg mi-foto`. Lo fácil es
+que las copie Nanuk:
+
+```bash
+nanuk bg add ~/Descargas/aurora.jpg   # la copia a user/backgrounds/ y la activa
+```
+
+O desde `nanuk menu` (`SUPER + SHIFT + I`) → **"Añadir una imagen de fondo"**:
+un buscador con tus imágenes de Imágenes, Descargas y Escritorio (las más
+nuevas primero) y la vista previa al lado; también puedes pegar la ruta de
+cualquier imagen. "Cambiar el fondo de pantalla" elige entre las que ya hay.
 
 Lo elegido se guarda como enlace en `~/.config/nanuk/user/background`, así que
 sobrevive a los updates. Lo pinta `swaybg` (no hay archivo de config: recibe la

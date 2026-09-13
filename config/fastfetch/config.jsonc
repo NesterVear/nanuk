@@ -28,7 +28,6 @@
     { "type": "wm",       "key": "wm" },
     { "type": "terminal", "key": "terminal" },
     { "type": "uptime",   "key": "encendido" },
-    { "type": "packages", "key": "paquetes" },
     { "type": "memory",   "key": "memoria" }
   ]
 }
