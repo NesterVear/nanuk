@@ -210,7 +210,9 @@ update_packages() {
 }
 
 cmd_update() {
-  if [[ "${1:-}" != --no-pull ]]; then
+  # NANUK_UPDATE_REEXEC: seguro contra bucles. Pase lo que pase, el relanzado
+  # tras el pull ocurre UNA sola vez.
+  if [[ "${1:-}" != --no-pull && -z "${NANUK_UPDATE_REEXEC:-}" ]]; then
     say "actualizando el repositorio de Nanuk..."
     if [[ -n "$(git -C "$REPO" status --porcelain 2>/dev/null)" ]]; then
       # Cambios locales en la copia del sistema (~/.local/share/nanuk; tu capa
@@ -223,7 +225,7 @@ cmd_update() {
     git -C "$REPO" pull --ff-only || warn "no se pudo hacer pull (¿sin red?)"
     # El pull puede haber cambiado este mismo script: el resto lo hace la
     # versión nueva.
-    exec bash "$REPO/bin/nanuk" update --no-pull
+    NANUK_UPDATE_REEXEC=1 exec bash "$REPO/bin/nanuk" update --no-pull
   fi
 
   say "actualizando el sistema (pacman)..."
@@ -605,7 +607,7 @@ case "$cmd" in
   remove|rm)   cmd_remove "$@" ;;
   list|ls)     cmd_list ;;
   sync)        cmd_sync ;;
-  update|up)   cmd_update ;;
+  update|up)   cmd_update "$@" ;;
   theme)       cmd_theme "$@" ;;
   bg|background) exec "$REPO/bin/nanuk-bg" "$@" ;;
   webapp|web)  cmd_webapp "$@" ;;
