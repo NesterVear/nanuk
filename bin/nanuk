@@ -340,6 +340,15 @@ cmd_update() {
   say "re-desplegando la config por defecto (tu capa user/ no se toca)..."
   bash "$REPO/install/06-dotfiles.sh"
 
+  # El paso 05 (splash de arranque, autologin, PAM/keyring) toca /etc y /boot y
+  # regenera el initramfs, así que no se relanza siempre: solo si cambió desde
+  # la versión de Nanuk que tenías aplicada.
+  if [[ -n "$from" ]] && git -C "$REPO" cat-file -e "$from^{commit}" 2>/dev/null \
+     && ! git -C "$REPO" diff --quiet "$from" HEAD -- install/05-desktop.sh themes/nanuk/plymouth; then
+    say "cambió el arranque/sistema de Nanuk: re-aplicando 05-desktop (tarda un poco)..."
+    bash "$REPO/install/05-desktop.sh" || warn "05-desktop falló; reintenta: bash $REPO/install/05-desktop.sh"
+  fi
+
   # Dentro de Hyprland: aplicar ya la config nueva y que la barra la relea.
   if command -v hyprctl &>/dev/null && hyprctl version &>/dev/null; then
     hyprctl reload >/dev/null || true

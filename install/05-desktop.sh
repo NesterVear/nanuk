@@ -225,13 +225,19 @@ fi
 # ── 3. Apps por defecto ─────────────────────────────────────────────
 # xdg-settings/xdg-mime escriben en ~/.config/mimeapps.list. El primero que
 # exista gana; el usuario lo cambia luego con `xdg-settings set ...`.
-for d in firefox.desktop brave-origin.desktop brave-browser.desktop chromium.desktop; do
-  if [[ -f "/usr/share/applications/$d" \
-     || -f "$HOME/.local/share/flatpak/exports/share/applications/$d" ]]; then
-    xdg-settings set default-web-browser "$d" && break || true
-  fi
-done
-xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
+# Solo si aún no hay uno elegido: `nanuk update` relanza este paso y no debe
+# pisar lo que el usuario cambió.
+if [[ -z "$(xdg-settings get default-web-browser 2>/dev/null)" ]]; then
+  for d in firefox.desktop brave-origin.desktop brave-browser.desktop chromium.desktop; do
+    if [[ -f "/usr/share/applications/$d" \
+       || -f "$HOME/.local/share/flatpak/exports/share/applications/$d" ]]; then
+      xdg-settings set default-web-browser "$d" && break || true
+    fi
+  done
+fi
+if [[ -z "$(xdg-mime query default inode/directory 2>/dev/null)" ]]; then
+  xdg-mime default org.gnome.Nautilus.desktop inode/directory || true
+fi
 
 # (La apariencia GTK vía gsettings se aplica en 06-dotfiles.sh, para que
 # `nanuk update` la reaplique.)
