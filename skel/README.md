@@ -13,6 +13,8 @@ vuelve a tocar**. Todo lo que quieras cambiar del sistema va aquí, nunca en
 - Paquetes tuyos → `packages.txt` (lo llena `nanuk install`)
 - Fondos de pantalla tuyos → `backgrounds/*.jpg|png`; el elegido es el enlace
   `background` (lo cambia `nanuk bg <nombre>`, `nanuk bg none` = negro puro)
+- Canal de actualizaciones → `channel` (no existe = versión `estable`; con
+  `main` dentro, `nanuk update` trae lo último sin esperar a que se publique)
 
 Guía completa: `docs/personalizar.md` en el repo
 (`~/.local/share/nanuk/docs/personalizar.md`).

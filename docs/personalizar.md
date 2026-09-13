@@ -85,6 +85,11 @@ Lo mismo con `kitty`, `mako`, `fuzzel`, `fastfetch`, `gtk-3.0`,
 
 Para volver a los defaults: borra `user/<app>` y re-ejecuta el paso 06.
 
+Tamaños por defecto, por si te parecen grandes o pequeños: la barra usa letra
+de **14 px** (`font-size` en `waybar/style.css`); el launcher, el menú de
+energía (`SUPER + ESC`) y la chuleta de atajos usan **13** (`font=` en
+`fuzzel/fuzzel.ini`, y el ancho `width` va en caracteres, así que crece con la letra).
+
 ### Apps web (Tidal, WhatsApp, ChatGPT… en ventana propia)
 
 `nanuk-webapp <url> [--focus]` abre la URL en Brave Origin en modo app (sin
@@ -234,6 +239,9 @@ Para cambiarlo, en `~/.config/nanuk/user/hypr/autostart.lua`:
 `n.lock_on_start = false` (nunca bloquear al entrar) o `true` (siempre, aunque
 el disco esté cifrado).
 
+Todo esto (PAM, keyring, autologin, splash) lo pone el paso 05, que
+`nanuk update` vuelve a aplicar solo cuando cambió en una versión nueva.
+
 ### Entradas que no quieres ver en el launcher
 
 `~/.config/nanuk/user/hidden-apps.txt`: un id de `.desktop` por línea (el nombre
@@ -243,10 +251,15 @@ dependencias (`default/hidden-apps.txt`). Aplica con el paso 06.
 
 ### Apps GTK y Qt (Nautilus, diálogos, VLC, KeePassXC…)
 
-Negro absoluto y blanco, iconos **Tela-circle-grey-dark** (estilo Material,
-carpetas grises), cursor Adwaita, radio 0. Tres piezas, todas en `default/`:
+Negro absoluto y blanco, iconos **Nanuk** (monocromos simbólicos, generados en
+`~/.local/share/icons/Nanuk`), cursor Adwaita, radio 0. La selección en listas
+y diálogos (Nautilus, abrir/guardar, el selector de carpetas de VS Code) es un
+**contorno de hielo** sin relleno; en las listas con columnas del diálogo GTK3
+solo lleva las líneas de arriba y abajo. Tres piezas, todas en `default/`:
 `gtk-3.0/` y `gtk-4.0/` (settings.ini + gtk.css) y el bloque `gsettings` del
-paso 05, que es lo que las apps de libadwaita leen de verdad en Wayland.
+paso 06, que es lo que las apps de libadwaita leen de verdad en Wayland. Los
+diálogos de abrir/guardar los dibuja un proceso aparte: tras cambiar el CSS,
+`systemctl --user restart xdg-desktop-portal-gtk`.
 Qt usa `QT_QPA_PLATFORMTHEME=gtk3` y sigue a GTK. Para cambiar de iconos:
 `gsettings set org.gnome.desktop.interface icon-theme "<nombre>"` y la línea
 `gtk-icon-theme-name` en tu copia de `user/gtk-3.0/settings.ini`.
@@ -310,6 +323,9 @@ queda en `~/.local/state/nanuk/swaybg.log`.
 | gsettings (modo oscuro, iconos, fuente) | Sí, se reaplican                            |
 | Paquetes                              | Solo se instalan los que Nanuk **añadió** a sus listas desde la última vez; los que ya no usa se avisan, no se borran |
 | `~/.local/share/nanuk` (el repo)      | Pasa a la versión `estable` (o la de `user/channel`); si lo editaste, tus cambios quedan en `git stash` |
+| Arranque: splash, autologin, PAM/keyring (paso 05) | Solo si cambió en la versión nueva (`install/05-desktop.sh` o el tema Plymouth); no cambia tu navegador ni tu gestor de archivos por defecto |
+| Servicios (paso 04: docker, libvirt…) | No se vuelve a ejecutar                     |
+| Rueda de la barra                     | Se vacía (ya no hay nada pendiente)           |
 
 Si alguna vez encuentras algo tuyo con sufijo `.bak.<timestamp>`, es que
 Nanuk lo encontró donde esperaba poner un enlace y lo apartó en vez de borrarlo.
