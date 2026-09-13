@@ -7,28 +7,41 @@
 #   ~/.config/nanuk/user/backgrounds/    ← los tuyos (nunca se tocan)
 # Tu elección es un enlace: ~/.config/nanuk/user/background → la imagen.
 # Si el enlace apunta a la palabra `none`, no hay imagen: Hyprland pinta el
-# negro puro de siempre (misc.background_color) y hyprpaper ni se arranca.
+# negro puro de siempre (misc.background_color) y swaybg ni se arranca.
 #
 #   nanuk-bg               lista los fondos (● = activo)
 #   nanuk-bg <nombre|ruta> activa uno: 3, 3.jpg, mi-foto o /ruta/a/imagen.png
 #   nanuk-bg next          el siguiente de la lista (SUPER + SHIFT + B)
 #   nanuk-bg none          negro puro, sin imagen
-#   nanuk-bg apply         arranca hyprpaper o cambia la imagen en caliente (autostart)
+#   nanuk-bg apply         pinta el fondo elegido (lo llama el autostart)
 #   nanuk-bg path          imprime la ruta del fondo activo (nada si es none)
 #   nanuk-bg names         solo los nombres, para menús (gum)
 #
-# hyprpaper lee ~/.config/hypr/hyprpaper.conf: ese archivo lo GENERA este
-# script a partir del enlace. No se edita a mano.
+# Lo pinta swaybg: una orden con la imagen como argumento, sin archivo de
+# config. No hyprpaper: la 0.8 dibuja con OpenGL y en una VM sin aceleración
+# 3D revienta al arrancar; swaybg usa memoria compartida y va en cualquier sitio.
 # ─────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 CFG="$HOME/.config/nanuk"
 LINK="$CFG/user/background"
-CONF="$HOME/.config/hypr/hyprpaper.conf"
+RUNTIME="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+# PID del swaybg que arrancó Nanuk. Así solo se cierra ESE, nunca otro swaybg
+# que tengas por tu cuenta. Vive en XDG_RUNTIME_DIR: se borra al apagar.
+PIDFILE="$RUNTIME/nanuk-swaybg.pid"
+BG_LOG="$HOME/.local/state/nanuk/swaybg.log"
+OLD_HYPRPAPER_CONF="$HOME/.config/hypr/hyprpaper.conf"
 
 if [[ -t 1 ]]; then B=$'\e[1m'; C=$'\e[36m'; R=$'\e[31m'; X=$'\e[0m'; else B=; C=; R=; X=; fi
 say() { echo "${C}▶${X} $*"; }
 die() { echo "${R}✖${X} $*" >&2; exit 1; }
+
+# Aviso en la terminal y, si hay escritorio, también como notificación
+# (al rotar con SUPER+SHIFT+B o desde el autostart no hay terminal que mirar).
+warn_bg() {
+  echo "${R}✖${X} $*" >&2
+  command -v notify-send &>/dev/null && notify-send -u critical "Fondo de pantalla" "$*" || true
+}
 
 # Lista ordenada de fondos: primero los del tema, después los tuyos.
 # sort -V ordena 1, 2, ... 10 como números y no como texto.
@@ -66,55 +79,98 @@ resolve() {
   return 1
 }
 
-start_hyprpaper() {
-  # uwsm-app lo mete como unidad de usuario (igual que waybar o mako);
-  # setsid -f lo desengancha de esta terminal para que no muera con ella.
-  if command -v uwsm-app &>/dev/null; then
-    setsid -f uwsm-app -- hyprpaper >/dev/null 2>&1
-  else
-    setsid -f hyprpaper >/dev/null 2>&1
+# swaybg se conecta a Wayland con WAYLAND_DISPLAY (un socket en
+# XDG_RUNTIME_DIR). Si quien lanza nanuk-bg no la tiene, libwayland prueba
+# "wayland-0" y falla si el socket se llama distinto (en Hyprland suele ser
+# wayland-1). Aquí se busca el socket real.
+ensure_wayland_env() {
+  local sock cur="${WAYLAND_DISPLAY:-}"
+  export XDG_RUNTIME_DIR="$RUNTIME"
+  [[ -n "$cur" && "$cur" != /* ]] && cur="$RUNTIME/$cur"
+  if [[ -z "$cur" || ! -S "$cur" ]]; then
+    unset WAYLAND_DISPLAY
+    for sock in "$RUNTIME"/wayland-[0-9]*; do
+      [[ -S "$sock" ]] && { export WAYLAND_DISPLAY="${sock##*/}"; break; }
+    done
   fi
+  [[ -n "${WAYLAND_DISPLAY:-}" ]]
+}
+
+# ¿Sigue vivo ese PID? (un proceso que ya terminó pero nadie ha recogido
+# queda como zombi, estado Z, y /proc/<pid> aún existe: eso cuenta como muerto)
+alive() {
+  local state
+  state="$(awk '{ print $3 }' "/proc/$1/stat" 2>/dev/null)" || return 1
+  [[ -n "$state" && "$state" != Z ]]
+}
+
+# PID del swaybg de Nanuk si sigue vivo. Se comprueba que ese PID sea de
+# verdad un swaybg: tras reiniciar, el número pudo reutilizarse.
+running_pid() {
+  local pid
+  pid="$(cat "$PIDFILE" 2>/dev/null)" || return 1
+  [[ "$pid" =~ ^[0-9]+$ ]] && alive "$pid" \
+    && [[ "$(cat "/proc/$pid/comm" 2>/dev/null)" == swaybg ]] && echo "$pid"
+}
+
+stop_bg() {
+  local pid
+  if pid="$(running_pid)"; then kill "$pid" 2>/dev/null || true; fi
+  rm -f "$PIDFILE"
+}
+
+# Restos de la época de hyprpaper (hasta 2026-09-12): el proceso y el archivo
+# que generaba este script (solo si lo generó él).
+cleanup_hyprpaper() {
+  pkill -x hyprpaper 2>/dev/null || true
+  if [[ -f "$OLD_HYPRPAPER_CONF" ]] && head -n 1 "$OLD_HYPRPAPER_CONF" | grep -q 'Generado por nanuk-bg'; then
+    rm -f "$OLD_HYPRPAPER_CONF"
+  fi
+}
+
+# Pinta <imagen>. El swaybg nuevo arranca ANTES de cerrar el viejo: así no se
+# ve el negro entre uno y otro, y si el nuevo falla, el fondo anterior sigue.
+start_bg() {
+  local bg="$1" old="" new
+  ensure_wayland_env || { warn_bg "no encuentro el socket de Wayland en $RUNTIME (¿estás dentro de Hyprland?)"; return 1; }
+  mkdir -p "$(dirname "$BG_LOG")"
+  old="$(running_pid || true)"
+
+  # setsid: sesión propia, para que no muera al cerrar la terminal o el menú
+  # que lo lanzó. En segundo plano (&) dentro de un script, setsid no crea otro
+  # proceso sino que se convierte en swaybg, así que $! es el PID de swaybg.
+  # -o '*' = todas las pantallas; fill = llena y recorta sin deformar.
+  setsid swaybg -o '*' -i "$bg" -m fill -c 000000 > "$BG_LOG" 2>&1 < /dev/null &
+  new=$!
+
+  # swaybg no avisa si no puede pintar: termina. Medio segundo largo basta
+  # para que cargue la imagen o se muera.
+  sleep 0.8
+  if ! alive "$new"; then
+    warn_bg "swaybg se cerró al arrancar: $(grep -v '^[[:space:]]*$' "$BG_LOG" | tail -n 3 | tr '\n' ' ')(log: $BG_LOG)"
+    return 1
+  fi
+  echo "$new" > "$PIDFILE"
+  if [[ -n "$old" && "$old" != "$new" ]]; then kill "$old" 2>/dev/null || true; fi
 }
 
 cmd_apply() {
+  cleanup_hyprpaper
   local bg; bg="$(current)"
   if [[ -z "$bg" || "$bg" == none || ! -f "$bg" ]]; then
-    # Sin imagen: hyprpaper fuera y Hyprland pinta negro. Si el enlace
-    # apunta a una imagen que ya no existe (tema cambiado), también.
-    pkill -x hyprpaper 2>/dev/null || true
+    # Sin imagen: fuera swaybg y Hyprland pinta negro. Si el enlace apunta a
+    # una imagen que ya no existe (tema cambiado), también.
+    stop_bg
     return 0
   fi
-  command -v hyprpaper &>/dev/null || die "falta hyprpaper: sudo pacman -S hyprpaper"
-  mkdir -p "$(dirname "$CONF")"
-  # Formato de hyprpaper ≥ 0.8: un bloque `wallpaper` por monitor (monitor
-  # vacío = todos). `preload` y `wallpaper = monitor, ruta` ya NO existen:
-  # con ellos hyprpaper no carga nada y se queda el negro de Hyprland.
-  cat > "$CONF" <<EOT
-# Generado por nanuk-bg. No editar: cambia el fondo con \`nanuk bg\`.
-splash = false
-ipc = true
-
-wallpaper {
-    monitor =
-    path = $bg
-    fit_mode = cover
-}
-EOT
-  if pgrep -x hyprpaper >/dev/null; then
-    # En caliente por IPC: hyprctl hyprpaper wallpaper 'monitor, ruta, modo'.
-    # Si falla o responde con error, se reinicia y lee el archivo de arriba.
-    local out
-    if ! out="$(hyprctl hyprpaper wallpaper ", $bg, cover" 2>&1)" || [[ "$out" == *[Ee]rror* ]]; then
-      pkill -x hyprpaper; sleep 0.2; start_hyprpaper
-    fi
-  else
-    start_hyprpaper
-  fi
+  command -v swaybg &>/dev/null || die "falta swaybg: sudo pacman -S swaybg (o nanuk update)"
+  start_bg "$bg"
 }
 
 cmd_set() {
-  local target="$1" path
+  local target="$1" path prev
   mkdir -p "$(dirname "$LINK")"
+  prev="$(readlink "$LINK" 2>/dev/null || true)"
   if [[ "$target" == none ]]; then
     ln -sfn none "$LINK"
     say "fondo: negro puro (sin imagen)"
@@ -123,7 +179,13 @@ cmd_set() {
     ln -sfn "$path" "$LINK"
     say "fondo: $(basename "$path")"
   fi
-  cmd_apply
+  # Si no se pudo pintar, el enlace vuelve a como estaba: en pantalla sigue el
+  # fondo anterior, y así el próximo arranque tampoco se queda en negro.
+  if ! cmd_apply; then
+    if [[ -n "$prev" ]]; then ln -sfn "$prev" "$LINK"; else rm -f "$LINK"; fi
+    echo "  se mantiene el fondo anterior" >&2
+    return 1
+  fi
 }
 
 cmd_next() {
@@ -163,6 +225,6 @@ case "${1:-list}" in
   next)   cmd_next ;;
   apply)  cmd_apply ;;
   path)   bg="$(current)"; [[ "$bg" != none ]] && echo "$bg" || true ;;
-  help|-h|--help) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+  help|-h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//' ;;
   *)      cmd_set "$1" ;;
 esac

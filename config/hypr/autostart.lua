@@ -16,7 +16,7 @@ hl.on("hyprland.start", function()
   hl.exec_cmd(n.launch("mako"))
   hl.exec_cmd(n.launch("hypridle"))
 
-  -- Fondo de pantalla: arranca hyprpaper con la imagen elegida en
+  -- Fondo de pantalla: arranca swaybg con la imagen elegida en
   -- user/background (o nada, si elegiste negro puro). Ver `nanuk bg`.
   hl.exec_cmd("nanuk-bg apply")
 

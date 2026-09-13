@@ -14,8 +14,10 @@ mako
 hyprlock
 hypridle
 
-# Fondo de pantalla (nanuk bg); sin imagen, Hyprland pinta negro puro
-hyprpaper
+# Fondo de pantalla (nanuk bg); sin imagen, Hyprland pinta negro puro.
+# swaybg y no hyprpaper: hyprpaper 0.8 dibuja con OpenGL y en una VM sin
+# aceleración 3D revienta; swaybg usa memoria compartida y va en cualquier sitio.
+swaybg
 
 # Terminal
 kitty

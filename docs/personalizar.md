@@ -225,7 +225,7 @@ y arranca con el `1`. Para elegir otro, o ninguno:
 ```bash
 nanuk bg              # lista (● = activo)
 nanuk bg 3            # activa 3.jpg del tema
-nanuk bg none         # negro puro, sin imagen (hyprpaper ni se arranca)
+nanuk bg none         # negro puro, sin imagen (swaybg ni se arranca)
 nanuk bg next         # el siguiente de la lista; también SUPER + SHIFT + B
 ```
 
@@ -234,8 +234,9 @@ webp, mejor sin espacios en el nombre) y aparecen en la lista con su nombre:
 `nanuk bg mi-foto`. También desde `nanuk menu` → "Cambiar el fondo de pantalla".
 
 Lo elegido se guarda como enlace en `~/.config/nanuk/user/background`, así que
-sobrevive a los updates. `~/.config/hypr/hyprpaper.conf` lo genera `nanuk-bg`
-a partir de ese enlace: no lo edites a mano.
+sobrevive a los updates. Lo pinta `swaybg` (no hay archivo de config: recibe la
+imagen como argumento). Si algo falla, avisa con una notificación y lo que dijo
+queda en `~/.local/state/nanuk/swaybg.log`.
 
 ### Tema
 
@@ -257,7 +258,6 @@ a partir de ese enlace: no lo edites a mano.
 | `~/.config/nanuk/user/`               | **No.** Solo se añaden plantillas nuevas si no existen |
 | `~/.config/nanuk/theme` (enlace)      | No, respeta el tema que elegiste              |
 | `~/.config/nanuk/user/background`     | No, respeta el fondo que elegiste (se crea si falta) |
-| `~/.config/hypr/hyprpaper.conf`       | Lo regenera `nanuk-bg` a partir del enlace anterior |
 | `~/.config/hypr/hyprland.lua`         | Sí (es nuestro; si había otro, se respalda `.bak.*`) |
 | `~/.config/{waybar,kitty,…}` (enlaces) | Se rehacen apuntando a `user/` o `default/`   |
 | `~/.config/nvim/`                     | Solo `colors/nanuk.lua` y `lua/plugins/nanuk.lua` |

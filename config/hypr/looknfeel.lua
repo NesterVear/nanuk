@@ -50,7 +50,7 @@ hl.config({
 
   misc = {
     -- Negro puro pintado por Hyprland: es el fondo cuando `nanuk bg none`
-    -- y lo que se ve detrás si hyprpaper aún no ha cargado la imagen.
+    -- y lo que se ve detrás si swaybg aún no ha cargado la imagen.
     background_color = "rgb(000000)",
     force_default_wallpaper = 0,
     disable_hyprland_logo = true,
