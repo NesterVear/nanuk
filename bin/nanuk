@@ -182,6 +182,12 @@ update_packages() {
     mapfile -t repo < <(list_pkgs "${files[@]}")
   fi
 
+  # Fuera lo que ya está cubierto por otro paquete instalado (pacman -T cuenta
+  # los "provides": nodejs-lts-jod satisface nodejs). Evita conflictos que,
+  # con --noconfirm, abortarían la instalación.
+  if (( ${#repo[@]} )); then
+    mapfile -t repo < <(pacman -T "${repo[@]}" || true)
+  fi
   if (( ${#repo[@]} )); then
     say "paquetes de Nanuk (repos): ${repo[*]:0:12}$( (( ${#repo[@]} > 12 )) && echo " …")"
     if sudo pacman -S --needed --noconfirm -- "${repo[@]}"; then

@@ -13,8 +13,12 @@ fail() {
 
 # 1. ¿Es Arch? Leemos /etc/os-release, que toda distro moderna trae.
 #    'source' lo carga como variables de bash (ID, NAME, etc.).
+#    Vale Arch puro (ID=arch) y sus derivadas que siguen siendo Arch por
+#    debajo, como Omarchy (ID=omarchy, ID_LIKE=arch): así funciona la
+#    migración sin reinstalar (install/from-omarchy.sh).
 source /etc/os-release
-[[ "$ID" == "arch" ]] || fail "Esto no es Arch Linux (ID=$ID). Nanuk solo se instala sobre Arch."
+[[ "$ID" == "arch" || " ${ID_LIKE:-} " == *" arch "* ]] \
+  || fail "Esto no es Arch Linux ni una derivada (ID=$ID). Nanuk solo se instala sobre Arch."
 
 # 2. ¿NO somos root? Se instala como usuario normal; sudo se usa puntualmente.
 #    (Correr todo como root dejaría archivos de $HOME siendo de root: dolor.)

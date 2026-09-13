@@ -39,21 +39,33 @@ sudo -v
 ( while kill -0 $$ 2>/dev/null; do sudo -n true 2>/dev/null; sleep 60; done ) &
 
 # ── 1. Respaldo ─────────────────────────────────────────────────────
-BK="$HOME/.local/share/nanuk-migracion/$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$BK"
-echo "→ respaldo en $BK"
-tar czf "$BK/home-config.tar.gz" -C "$HOME" --ignore-failed-read \
-  .config/hypr .config/omarchy .local/state/omarchy .config/uwsm \
-  .config/kitty .config/starship.toml .config/nvim .bashrc .bash_profile 2>/dev/null || true
-sudo tar czf "$BK/etc.tar.gz" -C / --ignore-failed-read \
-  etc/sddm.conf.d etc/default/limine etc/limine-entry-tool.d etc/mkinitcpio.conf \
-  etc/pacman.conf etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
-sudo chown "$USER" "$BK/etc.tar.gz"
-pacman -Qqe > "$BK/paquetes-explicitos.txt"
-pacman -Qq  > "$BK/paquetes-todos.txt"
-systemctl --user list-unit-files 'omarchy-*' --state=enabled --no-legend | awk '{print $1}' \
-  > "$BK/omarchy-user-units.txt" || true
-echo "✔ respaldo hecho"
+# Si una ejecución anterior se quedó a medias (su respaldo no tiene LEEME.md,
+# que se escribe solo al terminar), se REUTILIZA ese respaldo: se hizo antes de
+# tocar nada. Uno nuevo guardaría el estado ya a medio migrar (servicios de
+# Omarchy desactivados, mise-bin quitado) y rollback-to-omarchy.sh, que usa el
+# respaldo más reciente, ya no sabría qué devolver.
+BK_BASE="$HOME/.local/share/nanuk-migracion"
+PREV="$(ls -d "$BK_BASE"/*/ 2>/dev/null | sort | tail -1 || true)"
+if [[ -n "$PREV" && ! -f "$PREV/LEEME.md" ]]; then
+  BK="${PREV%/}"
+  echo "→ continuando una migración a medias: se reutiliza el respaldo $BK"
+else
+  BK="$BK_BASE/$(date +%Y%m%d-%H%M%S)"
+  mkdir -p "$BK"
+  echo "→ respaldo en $BK"
+  tar czf "$BK/home-config.tar.gz" -C "$HOME" --ignore-failed-read \
+    .config/hypr .config/omarchy .local/state/omarchy .config/uwsm \
+    .config/kitty .config/starship.toml .config/nvim .bashrc .bash_profile 2>/dev/null || true
+  sudo tar czf "$BK/etc.tar.gz" -C / --ignore-failed-read \
+    etc/sddm.conf.d etc/default/limine etc/limine-entry-tool.d etc/mkinitcpio.conf \
+    etc/pacman.conf etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
+  sudo chown "$USER" "$BK/etc.tar.gz"
+  pacman -Qqe > "$BK/paquetes-explicitos.txt"
+  pacman -Qq  > "$BK/paquetes-todos.txt"
+  systemctl --user list-unit-files 'omarchy-*' --state=enabled --no-legend | awk '{print $1}' \
+    > "$BK/omarchy-user-units.txt" || true
+  echo "✔ respaldo hecho"
+fi
 
 # ── 2. Proteger el arranque ────────────────────────────────────────
 # limine-mkinitcpio-hook regenera la imagen de arranque (UKI) en cada

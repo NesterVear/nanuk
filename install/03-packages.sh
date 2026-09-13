@@ -39,13 +39,25 @@ case "$(grep -m1 '^vendor_id' /proc/cpuinfo)" in
   *AuthenticAMD*)  PACMAN_PKGS+=(amd-ucode) ;;
 esac
 
-echo "→ pacman: ${#PACMAN_PKGS[@]} paquetes"
-sudo pacman -S --needed --noconfirm "${PACMAN_PKGS[@]}"
+# Solo lo que FALTA. `pacman -T` (deptest) imprime los nombres que ningún
+# paquete instalado satisface, contando los "provides": si ya tienes, por
+# ejemplo, nodejs-lts-jod (que provee nodejs), `nodejs` no se pide. Sin esto
+# pacman querría reemplazarlo y, con --noconfirm, la respuesta a "¿reemplazar?"
+# es NO: el paso abortaría (pasó migrando desde Omarchy).
+mapfile -t MISSING < <(pacman -T "${PACMAN_PKGS[@]}" || true)
+echo "→ pacman: ${#PACMAN_PKGS[@]} paquetes en las listas, faltan ${#MISSING[@]}"
+if (( ${#MISSING[@]} )); then
+  sudo pacman -S --needed --noconfirm "${MISSING[@]}"
+fi
 # Marcarlos como instalados "explícitamente". Si alguno ya estaba como
 # dependencia de otra cosa (p. ej. de un paquete de Omarchy), `--needed` lo
 # salta y se queda como dependencia: un `pacman -Rns` de esa otra cosa se lo
-# llevaría por delante. Así quedan protegidos. Idempotente.
-sudo pacman -D --asexplicit "${PACMAN_PKGS[@]}" >/dev/null
+# llevaría por delante. Así quedan protegidos. Solo los que existen con ese
+# nombre (a nodejs-lts-jod no se le puede marcar como "nodejs"). Idempotente.
+mapfile -t PRESENT < <(pacman -Qq "${PACMAN_PKGS[@]}" 2>/dev/null || true)
+if (( ${#PRESENT[@]} )); then
+  sudo pacman -D --asexplicit "${PRESENT[@]}" >/dev/null
+fi
 
 # ── 2. AUR (opcional) ──────────────────────────────────────────────
 # aur_install: instala del AUR y, si algo falla (paru roto, paquete que ya no
