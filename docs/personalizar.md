@@ -137,6 +137,20 @@ izquierda de la barra. Un menú en una terminal flotante (`gum` + `fzf`) con:
 - **Actualizar el sistema**, **cambiar el tema**, **cambiar el fondo**, apps
   web, lenguajes y el diagnóstico.
 
+### El clima (barra)
+
+El módulo del clima muestra el **estado general** (soleado, nublado, lluvia…)
+en la barra; la temperatura y la sensación térmica aparecen en el tooltip, junto
+con la ciudad. La ubicación se deduce de tu IP; para fijarla, añade en
+`~/.config/nanuk/user/bash/rc`:
+
+```bash
+export NANUK_WEATHER_LOCATION="Guadalajara"
+```
+
+Clic en el módulo fuerza una consulta (sin esperar el refresco automático). Sin
+red no muestra nada.
+
 ### El icono de actualizaciones (barra)
 
 Junto al clima aparece el icono de actualizar (󰓦) **solo cuando hay algo que actualizar**:
@@ -170,14 +184,14 @@ así que todo queda anotado en tu capa igual.
   | Archivo               | Qué hay                                            | ¿Se instala?          |
   |-----------------------|----------------------------------------------------|-----------------------|
   | `packages/base.txt`   | sistema, red, energía, CLI de diario (btop, fzf, eza, gum…) | siempre (pacman) |
-  | `packages/desktop.txt`| Hyprland, barra, kitty, audio, Firefox, fuentes, GTK | siempre (pacman) |
+  | `packages/desktop.txt`| Hyprland, barra, kitty, audio, Firefox, VLC, Obsidian, fuentes, GTK | siempre (pacman) |
   | `packages/dev.txt`    | neovim, docker, python/php/node/lua, mise, rustup (BD: en Docker) | siempre (pacman) |
   | `packages/3dprint.txt`| FreeCAD                                            | siempre (pacman)      |
   | `packages/virt.txt`   | libvirt, qemu, virt-manager, OVMF, swtpm           | siempre (pacman)      |
   | `packages/security.txt` | KeePassXC, tor, Tor Browser (launcher)           | siempre (pacman)      |
   | `packages/aur.txt`    | Brave Origin, VS Code, fuente del wordmark         | siempre (yay, no crítico) |
   | `packages/flatpak.txt`| OrcaSlicer                                         | siempre (flathub, no crítico) |
-  | `packages/extras.txt` | apps personales (R, MariaDB nativa, Obsidian, LibreOffice…) | solo con `NANUK_EXTRAS=1` |
+  | `packages/extras.txt` | apps personales (R, MariaDB nativa, LibreOffice…) | solo con `NANUK_EXTRAS=1` |
 
   Quitar un paquete de Nanuk = borrar su línea. Ojo: eso solo evita que se
   instale en máquinas nuevas; en la tuya sigue hasta que hagas `pacman -Rns`.

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Clima para waybar, desde wttr.in. Salida JSON (return-type=json).
-# Sin red o sin respuesta → texto vacío: el módulo simplemente no se ve.
+# En la barra se ve el estado general (soleado, nublado, lluvia...); la
+# temperatura y la sensación quedan en el tooltip. Sin red → no muestra nada.
 # Ubicación: por IP (automática). Fíjala con NANUK_WEATHER_LOCATION=Ciudad.
 set -uo pipefail
 
@@ -13,11 +14,19 @@ if [[ "${1:-}" != "--refresh" && -f "$cache" ]]; then
   (( age < 1800 )) && { cat "$cache"; exit 0; }
 fi
 
-temp=$(curl -sf --max-time 8 "https://wttr.in/${loc}?format=%t" 2>/dev/null | tr -d '+' | xargs || true)
-if [[ -z "$temp" ]]; then
+# %c = icono, %C = estado (español), %t = temperatura, %f = sensación, %l = lugar.
+data=$(curl -sf --max-time 8 "https://wttr.in/${loc}?format=%c|%C|%t|%f|%l&lang=es" 2>/dev/null || true)
+if [[ -z "$data" ]]; then
   [[ -f "$cache" ]] && cat "$cache" || echo '{"text":""}'
   exit 0
 fi
-tip=$(curl -sf --max-time 8 "https://wttr.in/${loc}?format=%l:+%C,+%t+(sensación+%f)" 2>/dev/null | tr -d '+' || true)
 
-printf '{"text":"󰔏 %s","tooltip":"%s"}\n' "$temp" "${tip:-$temp}" | tee "$cache"
+IFS='|' read -r icon cond temp feel place <<<"$data"
+icon=$(xargs <<<"$icon")
+cond=$(xargs <<<"$cond")
+temp=$(tr -d '+' <<<"$temp" | xargs)
+feel=$(tr -d '+' <<<"$feel" | xargs)
+place=$(xargs <<<"$place")
+
+printf '{"text":"%s %s","tooltip":"%s: %s, %s (sensación %s)"}\n' \
+  "$icon" "$cond" "${place:-$cond}" "$cond" "$temp" "$feel" | tee "$cache"

@@ -5,7 +5,6 @@
 
 r                  # lenguaje R (pesado; `nanuk lang r` también lo instala)
 mariadb            # base de datos nativa; por defecto Nanuk las deja en Docker (puerto 3306 libre)
-obsidian
 localsend
 libreoffice-fresh
 libreoffice-fresh-es

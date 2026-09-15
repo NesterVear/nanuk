@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(curl -sf --max-time 10 https://wttr.in/?format=%c|%C|%t|%f|%l 2 >& 1)",
+      "Shell(curl -sf --max-time 10 https://wttr.in/?format=%C&lang=es 2 >& 1)",
+      "Shell(curl -sf --max-time 10 https://wttr.in/?format=%c&lang=es 2 >& 1)",
+      "Shell(bash -n /home/nestervear/projects/nanuk/config/waybar/weather.sh && echo \"sintaxis OK\"; echo \"---\"; XDG_CACHE_HOME=$(mktemp -d) bash /home/nestervear/projects/nanuk/config/waybar/weather.sh)",
+      "Shell(curl -sf -o /dev/null -w %{http_code}\\n --max-time 10 https://github.com/nvim-mini/mini.base16)",
+      "Shell(echo:*)",
+      "Shell(sed:*)",
+      "Shell(jq:*)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

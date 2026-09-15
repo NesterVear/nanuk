@@ -62,6 +62,7 @@ evince
 imv
 mpv
 vlc
+obsidian            # notas en markdown
 
 # Toolkits y temas (Wayland para Qt, tema oscuro GTK)
 qt5-wayland
