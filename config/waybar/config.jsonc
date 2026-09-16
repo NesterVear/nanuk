@@ -40,8 +40,8 @@
     }
   },
 
-  // Clima: estado general (soleado, nublado, lluvia...) en la barra;
-  // temperatura y sensación en el tooltip. wttr.in. Sin red → no muestra nada.
+  // Clima: solo el icono en la barra; temperatura, sensación y estado en el
+  // tooltip. wttr.in. Sin red → no muestra nada.
   "custom/weather": {
     "exec": "~/.config/waybar/weather.sh",
     "return-type": "json",

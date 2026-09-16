@@ -9,3 +9,4 @@
 - Prefers zoxide as the default directory-jumping tool (installed by default, activated in the shell). Confidence: 0.8
 - Prefers Obsidian as a key note-taking app (installed by default). Confidence: 0.7
 - Prefers VLC as the default media player. Confidence: 0.6
+- Prefers Arch Linux over Ubuntu; only uses the Ubuntu os-release (text-only) as a temporary workaround to install the VPN, then reverts to the real Arch identity and verifies the VPN still works. Confidence: 0.85

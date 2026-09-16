@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Clima para waybar, desde wttr.in. Salida JSON (return-type=json).
-# En la barra se ve el estado general (soleado, nublado, lluvia...); la
-# temperatura y la sensación quedan en el tooltip. Sin red → no muestra nada.
+# En la barra se ve solo el icono; la temperatura, la sensación y el estado
+# quedan en el tooltip. Sin red → no muestra nada.
 # Ubicación: por IP (automática). Fíjala con NANUK_WEATHER_LOCATION=Ciudad.
 set -uo pipefail
 
@@ -28,5 +28,5 @@ temp=$(tr -d '+' <<<"$temp" | xargs)
 feel=$(tr -d '+' <<<"$feel" | xargs)
 place=$(xargs <<<"$place")
 
-printf '{"text":"%s %s","tooltip":"%s: %s, %s (sensación %s)"}\n' \
-  "$icon" "$cond" "${place:-$cond}" "$cond" "$temp" "$feel" | tee "$cache"
+printf '{"text":"%s","tooltip":"%s: %s, %s (sensación %s)"}\n' \
+  "$icon" "${place:-$cond}" "$cond" "$temp" "$feel" | tee "$cache"

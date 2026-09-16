@@ -139,9 +139,9 @@ izquierda de la barra. Un menú en una terminal flotante (`gum` + `fzf`) con:
 
 ### El clima (barra)
 
-El módulo del clima muestra el **estado general** (soleado, nublado, lluvia…)
-en la barra; la temperatura y la sensación térmica aparecen en el tooltip, junto
-con la ciudad. La ubicación se deduce de tu IP; para fijarla, añade en
+El módulo del clima muestra solo el **icono** en la barra; la temperatura, la
+sensación térmica y el estado aparecen en el tooltip, junto con la ciudad. La
+ubicación se deduce de tu IP; para fijarla, añade en
 `~/.config/nanuk/user/bash/rc`:
 
 ```bash

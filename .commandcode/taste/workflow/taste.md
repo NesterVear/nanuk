@@ -6,3 +6,4 @@
 - Wants system updates delivered via `nanuk update` (pull repo + redeploy) without requiring users to reinstall packages or rebuild the ISO. Confidence: 0.75
 - Wants the ISO to install the latest package versions at build/install time rather than pinned versions. Confidence: 0.7
 - Wants internal documentation to include a short usage guide for each default program and an explanation of why that program was chosen over its alternatives. Confidence: 0.85
+- Prefers to test changes locally on his own machine (following `main`) before promoting them by moving the `estable` tag. Confidence: 0.9

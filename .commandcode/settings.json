@@ -8,7 +8,8 @@
       "Shell(curl -sf -o /dev/null -w %{http_code}\\n --max-time 10 https://github.com/nvim-mini/mini.base16)",
       "Shell(echo:*)",
       "Shell(sed:*)",
-      "Shell(jq:*)"
+      "Shell(jq:*)",
+      "Shell(bash config/waybar/weather.sh --refresh)"
     ],
     "deny": [],
     "defaultMode": "default"
