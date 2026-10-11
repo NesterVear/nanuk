@@ -46,11 +46,31 @@ end)
 n.bind("SUPER + O", "Fijar ventana flotante (visible en todos los workspaces)", dsp.window.pin())
 
 -- ── Estilo Windows: minimizar ───────────────────────────────────────
--- Hyprland no tiene "minimizar". Lo simulamos con un workspace especial
--- llamado "minimized": SUPER+M manda la ventana ahí sin seguirla;
--- SUPER+SHIFT+M muestra/oculta ese cajón para recuperarlas.
-n.bind("SUPER + M", "Minimizar ventana", dsp.window.move({ workspace = "special:minimized", follow = false }))
-n.bind("SUPER + SHIFT + M", "Ver ventanas minimizadas", dsp.workspace.toggle_special("minimized"))
+-- Hyprland no tiene "minimizar", así que lo simulamos con un workspace
+-- especial llamado "minimized". SUPER+M se comporta como el atajo de
+-- ocultar/mostrar de KeePass: con una ventana enfocada la oculta (sigue
+-- abierta y corriendo) y, pulsado otra vez, la vuelve a mostrar. Sirve para
+-- apps que no tienen bandeja (p. ej. Hillstone). SUPER+SHIFT+M queda para
+-- mostrar/ocultar el cajón a secas, con lo que haya dentro.
+n.bind("SUPER + M", "Minimizar / mostrar la ventana (toggle)", function()
+  -- 1) El cajón está a la vista: se oculta (las ventanas siguen abiertas).
+  local shown = hl.get_active_special_workspace()
+  if shown and shown.name == "special:minimized" then
+    hl.dispatch(dsp.workspace.toggle_special("minimized"))
+    return
+  end
+  -- 2) Hay ventanas guardadas: se muestran.
+  local box = hl.get_workspace("special:minimized")
+  if box and not box.is_empty then
+    hl.dispatch(dsp.workspace.toggle_special("minimized"))
+    return
+  end
+  -- 3) Si no hay nada guardado, se manda la ventana activa al cajón.
+  if hl.get_active_window() then
+    hl.dispatch(dsp.window.move({ workspace = "special:minimized", follow = false }))
+  end
+end)
+n.bind("SUPER + SHIFT + M", "Mostrar/ocultar ventanas minimizadas", dsp.workspace.toggle_special("minimized"))
 
 -- ── Foco ────────────────────────────────────────────────────────────
 n.bind("SUPER + LEFT", "Foco a la izquierda", dsp.focus({ direction = "l" }))

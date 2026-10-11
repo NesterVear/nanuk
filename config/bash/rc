@@ -28,6 +28,27 @@ fi
 
 # ── Herramientas interactivas ──────────────────────────────────────
 command -v starship >/dev/null && eval "$(starship init bash)"
+
+# Indicador del prompt. Starship no sabe si ya se ejecutó un comando: en el
+# primer prompt de la shell $? vale 0 igual que tras un comando correcto, y el
+# módulo `character` mostraría ● desde el arranque. Este hook corre dentro de
+# starship_precmd (antes de que se dibuje el prompt) y le pasa el estado por
+# entorno, que es lo que leen los módulos custom del starship.toml:
+#   NANUK_CMD_RAN=0  → primer prompt: sin indicador (queda solo "~ ❯")
+#   NANUK_CMD_RAN=1  → ya corrió algo; NANUK_CMD_STATUS es su $?
+# El primer prompt se reconoce con un marcador propio; a partir del segundo ya
+# hubo un comando (aunque sea una línea vacía).
+_nanuk_prompt_state() {
+  if [[ -n "${_nanuk_prompt_seen:-}" ]]; then
+    export NANUK_CMD_RAN=1
+    export NANUK_CMD_STATUS="${STARSHIP_CMD_STATUS:-0}"
+  else
+    export NANUK_CMD_RAN=0
+    _nanuk_prompt_seen=1
+  fi
+}
+starship_precmd_user_func=_nanuk_prompt_state
+
 command -v zoxide   >/dev/null && eval "$(zoxide init bash)"     # `z carpeta`
 command -v fzf      >/dev/null && eval "$(fzf --bash)"           # Ctrl+R, Ctrl+T
 command -v mise     >/dev/null && eval "$(mise activate bash)"   # versiones de node/python/php

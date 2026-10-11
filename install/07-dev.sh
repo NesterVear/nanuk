@@ -23,11 +23,18 @@ if command -v rustup &>/dev/null; then
 fi
 
 # ── Neovim / LazyVim ─────────────────────────────────────────────
+# En un `nanuk update` (NANUK_UPDATE=1) NO creamos LazyVim si falta: solo
+# refrescamos el tema de una config que ya existe. Así, si borraste
+# ~/.config/nvim a propósito, una actualización no te lo vuelve a poner.
 NVIM_DIR="$HOME/.config/nvim"
 if [[ ! -e "$NVIM_DIR" ]]; then
-  echo "→ Clonando LazyVim (plantilla oficial)..."
-  git clone --depth 1 https://github.com/LazyVim/starter "$NVIM_DIR"
-  rm -rf "$NVIM_DIR/.git"
+  if [[ -n "${NANUK_UPDATE:-}" ]]; then
+    echo "  (sin ~/.config/nvim: nada que refrescar)"
+  else
+    echo "→ Clonando LazyVim (plantilla oficial)..."
+    git clone --depth 1 https://github.com/LazyVim/starter "$NVIM_DIR"
+    rm -rf "$NVIM_DIR/.git"
+  fi
 elif [[ ! -f "$NVIM_DIR/init.lua" ]]; then
   echo "⚠ ~/.config/nvim ya existe y no parece LazyVim — no lo toco."
 fi

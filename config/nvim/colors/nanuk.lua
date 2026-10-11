@@ -1,7 +1,7 @@
 -- Colorscheme "nanuk" — se invoca con :colorscheme nanuk (LazyVim lo hace solo).
 -- Negro absoluto, blanco, grises; el hielo (#9fd8ff) solo donde hay foco:
 -- cursor y búsqueda activa. Aplica la paleta a TODOS los grupos vía
--- mini.base16 (incluye treesitter, LSP y plugins). Requiere echasnovski/mini.base16.
+-- mini.base16 (incluye treesitter, LSP y plugins). Requiere nvim-mini/mini.base16.
 
 local ok, base16 = pcall(require, "mini.base16")
 if not ok then

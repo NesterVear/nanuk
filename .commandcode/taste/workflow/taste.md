@@ -7,5 +7,6 @@
 - Wants the ISO to install the latest package versions at build/install time rather than pinned versions. Confidence: 0.7
 - Wants internal documentation to include a short usage guide for each default program and an explanation of why that program was chosen over its alternatives. Confidence: 0.85
 - Prefers to test changes locally on his own machine (following `main`) before promoting them by moving the `estable` tag. Confidence: 0.9
+- Wants updates to refresh shipped config so the installed copy never drifts from the repo (e.g., a renamed LazyVim plugin persisted on the machine after the repo was already fixed); prefers fixing the root cause (make `nanuk update` redeploy it) over patching only the installed file. Confidence: 0.65
 - Wants the update indicator to be driven only by new Nanuk repo versions (not system/AUR/flatpak updates), while the actual update run still refreshes the whole system (`-Syu`). Confidence: 0.7
 - Wants applications to exit gracefully/save their session before power-off or reboot (dislikes apps reporting an improper close, e.g., Firefox offering to restore the session). Confidence: 0.6

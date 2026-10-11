@@ -391,6 +391,13 @@ cmd_update() {
   say "re-desplegando la config por defecto (tu capa user/ no se toca)..."
   bash "$REPO/install/06-dotfiles.sh"
 
+  # El tema de Neovim (colors/nanuk.lua y lua/plugins/nanuk.lua) también es
+  # nuestro y se despliega en el paso 07: sin refrescarlo aquí, un plugin
+  # renombrado en LazyVim (p. ej. echasnovski → nvim-mini/mini.base16) dejaría
+  # la copia instalada desactualizada y LazyVim avisaría en cada arranque.
+  # NANUK_UPDATE evita que el paso 07 recree LazyVim si lo borraste a propósito.
+  NANUK_UPDATE=1 bash "$REPO/install/07-dev.sh"
+
   # El paso 05 (splash de arranque, autologin, PAM/keyring) toca /etc y /boot y
   # regenera el initramfs, así que no se relanza siempre: solo si cambió desde
   # la versión de Nanuk que tenías aplicada.

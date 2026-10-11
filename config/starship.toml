@@ -1,17 +1,36 @@
 # Nanuk — prompt (starship). Una línea, gris y blanco.
-# Al principio, un indicador del ÚLTIMO comando: ● hielo si salió bien, ✖ en
-# rojo suave si falló. Al final, la flecha ❯ de siempre.
+# Al principio, un indicador del comando anterior: ● hielo si salió bien, ✖ en
+# rojo suave si falló. Solo aparece cuando YA se ejecutó algo: en el primer
+# prompt de la shell todavía no hay comando del que informar, así que queda
+# solo el directorio. Al final, la flecha ❯ de siempre.
 # https://starship.rs/config/
+#
+# El estado lo pasa bash (config/bash/rc): un hook en starship_precmd_user_func
+# exporta NANUK_CMD_RAN y NANUK_CMD_STATUS justo antes de dibujar el prompt.
 
 add_newline = true
 command_timeout = 3000
-# $character va PRIMERO (el indicador) y al final la flecha ❯ fija. Ojo: el
-# módulo character ya añade el espacio de después, no se pone otro.
-format = "$character[$directory$git_branch$git_status]($style)$python[❯](bold white) "
+# ${custom.*} y no $custom: fijamos el orden (el indicador primero) y que aquí
+# solo entren esos dos módulos nuestros.
+format = "${custom.nanuk_ok}${custom.nanuk_err}[$directory$git_branch$git_status]($style)$python[❯](bold white) "
 
-[character]
-success_symbol = "[●](bold #9fd8ff)"
-error_symbol = "[✖](bold #d19a9a)"
+# Indicador del prompt, en dos módulos (uno por estado) para dar a cada símbolo
+# su color. `when` decide si se muestran y `command` no imprime nada (el símbolo
+# va en `format`). Ojo: un módulo custom sin `when` no se muestra nunca (el
+# valor por defecto es false).
+[custom.nanuk_ok]
+when = 'test "${NANUK_CMD_RAN:-0}" = 1 && test "${NANUK_CMD_STATUS:-0}" = 0'
+command = "true"
+symbol = "●"
+style = "bold #9fd8ff"
+format = "[$symbol]($style) "
+
+[custom.nanuk_err]
+when = 'test "${NANUK_CMD_RAN:-0}" = 1 && test "${NANUK_CMD_STATUS:-0}" != 0'
+command = "true"
+symbol = "✖"
+style = "bold #d19a9a"
+format = "[$symbol]($style) "
 
 [directory]
 truncation_length = 2
