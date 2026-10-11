@@ -153,14 +153,16 @@ red no muestra nada.
 
 ### El icono de actualizaciones (barra)
 
-Junto al clima aparece el icono de actualizar (󰓦) **solo cuando hay algo que actualizar**:
-repos oficiales, AUR, flatpak o commits nuevos de Nanuk. Pasa el ratón por
-encima para ver la lista; clic → una terminal flotante la muestra y pregunta
-si actualizar ahora (`nanuk update`). Se consulta internet **una vez por
-encendido, una hora después de arrancar** (paquetes y si hay una versión
-**estable** nueva de Nanuk), y otra vez si no apagas en más de 24 h. Si en ese
-momento no hay red, lo reintenta a los 10 minutos. Lo mismo desde la terminal,
-al momento: `nanuk check` (solo mira, no cambia nada).
+Junto al clima aparece el icono de actualizar (󰓦) **solo cuando hay una versión
+nueva de Nanuk** (se movió la bandera `estable` del repo). Las actualizaciones
+del sistema, del AUR o de flatpak **no** lo encienden: se aplican igual cuando
+actualizas, porque `nanuk update` hace un `pacman -Syu` completo. Pasa el ratón
+por encima para ver qué cambia; clic → una terminal flotante lo muestra y
+pregunta si actualizar ahora (`nanuk update`). Se consulta internet **una vez
+por encendido, una hora después de arrancar**, y otra vez si no apagas en más de
+24 h. Si en ese momento no hay red, lo reintenta a los 10 minutos. Lo mismo
+desde la terminal, al momento: `nanuk check` (mira la versión de Nanuk y, de
+paso, te avisa de cuántas actualizaciones tiene el sistema; no cambia nada).
 
 Nanuk sigue la etiqueta `estable` del repo, no cada commit. Para seguir lo
 último (`main`), o volver a `estable`:
@@ -184,14 +186,14 @@ así que todo queda anotado en tu capa igual.
   | Archivo               | Qué hay                                            | ¿Se instala?          |
   |-----------------------|----------------------------------------------------|-----------------------|
   | `packages/base.txt`   | sistema, red, energía, CLI de diario (btop, fzf, eza, gum…) | siempre (pacman) |
-  | `packages/desktop.txt`| Hyprland, barra, kitty, audio, Firefox, VLC, Obsidian, fuentes, GTK | siempre (pacman) |
+  | `packages/desktop.txt`| Hyprland, barra, kitty, audio, Firefox, VLC, Obsidian, LibreOffice, fuentes, GTK | siempre (pacman) |
   | `packages/dev.txt`    | neovim, docker, python/php/node/lua, mise, rustup (BD: en Docker) | siempre (pacman) |
   | `packages/3dprint.txt`| FreeCAD                                            | siempre (pacman)      |
   | `packages/virt.txt`   | libvirt, qemu, virt-manager, OVMF, swtpm           | siempre (pacman)      |
   | `packages/security.txt` | KeePassXC, tor, Tor Browser (launcher)           | siempre (pacman)      |
   | `packages/aur.txt`    | Brave Origin, VS Code, fuente del wordmark         | siempre (yay, no crítico) |
   | `packages/flatpak.txt`| OrcaSlicer                                         | siempre (flathub, no crítico) |
-  | `packages/extras.txt` | apps personales (R, MariaDB nativa, LibreOffice…) | solo con `NANUK_EXTRAS=1` |
+  | `packages/extras.txt` | apps personales (R, MariaDB nativa, GIMP…) | solo con `NANUK_EXTRAS=1` |
 
   Quitar un paquete de Nanuk = borrar su línea. Ojo: eso solo evita que se
   instale en máquinas nuevas; en la tuya sigue hasta que hagas `pacman -Rns`.

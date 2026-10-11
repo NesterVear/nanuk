@@ -1,8 +1,8 @@
 # Nanuk — paleta fuente del tema.
 #
 # Regla: NEGRO + BLANCO + GRISES. El acento (hielo, #9fd8ff) aparece SOLO
-# donde hay "foco": el borde de la ventana activa, el cursor de texto, y la
-# línea del lock / splash de arranque. En ningún otro sitio.
+# donde hay "foco": el borde de la ventana activa, el cursor de texto, la
+# selección de texto, y la línea del lock / splash de arranque. En ningún otro sitio.
 #
 # Forma: densidad ESTRICTA. gaps 0, bordes de 1 px, radio 0, sin sombras
 # ni blur. Ventana activa: borde hielo; inactiva: #1a1a1a (casi invisible,
@@ -14,7 +14,7 @@
 mode = "dark"
 
 accent = "#9fd8ff"        # hielo — SOLO foco (ver regla arriba)
-selection = "#1e1e1e"     # selección de texto: gris, no azul
+selection = "#9fd8ff"     # selección de texto: hielo (encima, texto en negro)
 muted = "#707070"
 
 background = "#000000"

@@ -64,6 +64,10 @@ mpv
 vlc
 obsidian            # notas en markdown
 
+# Oficina
+libreoffice-fresh              # suite ofimática (Writer, Calc, Impress…)
+libreoffice-fresh-es           # interfaz y corrector en español
+
 # Toolkits y temas (Wayland para Qt, tema oscuro GTK)
 qt5-wayland
 qt6-wayland

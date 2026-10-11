@@ -9,7 +9,8 @@
       "Shell(echo:*)",
       "Shell(sed:*)",
       "Shell(jq:*)",
-      "Shell(bash config/waybar/weather.sh --refresh)"
+      "Shell(bash config/waybar/weather.sh --refresh)",
+      "Shell(starship:*)"
     ],
     "deny": [],
     "defaultMode": "default"

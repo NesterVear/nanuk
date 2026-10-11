@@ -12,7 +12,7 @@
 #   nanuk list                   muestra tu lista personal
 #   nanuk sync                   instala todo lo de tu lista (máquina nueva)
 #   nanuk update                 actualiza repo + sistema + AUR + flatpak + paquetes nuevos + dotfiles
-#   nanuk check [--json|--ask]   ¿hay actualizaciones? (la rueda de la barra usa --json y --ask)
+#   nanuk check [--json|--ask]   ¿hay versión nueva de Nanuk? (la rueda de la barra usa --json y --ask)
 #   nanuk webapp add|remove|list  apps web (Brave, ventana propia) con nombre + URL
 #   nanuk menu                   menú: buscar/quitar paquetes, tema, fondo, actualizar...
 #   nanuk theme [<tema>]          lista temas / cambia el activo
@@ -419,8 +419,9 @@ cmd_update() {
 # ── ¿Hay actualizaciones? ─────────────────────────────────────────
 # Una línea por actualización pendiente: "<origen>\t<detalle>". No cambian nada.
 
-# Paquetes: checkupdates baja las bases de datos a una copia temporal (sin
-# root), yay pregunta al AUR y flatpak a flathub.
+# Paquetes del sistema (solo informativo: `nanuk check` a mano los cuenta como
+# aviso, pero NO encienden la rueda de la barra). checkupdates baja las bases de
+# datos a una copia temporal (sin root), yay pregunta al AUR y flatpak a flathub.
 pending_system() {
   checkupdates 2>/dev/null | awk '{ print "sistema\t" $0 }' || true
   if [[ -n "$AUR" ]]; then
@@ -461,25 +462,31 @@ pending_nanuk() {
 boot_id()        { cat /proc/sys/kernel/random/boot_id 2>/dev/null || echo desconocido; }
 uptime_seconds() { cut -d. -f1 /proc/uptime 2>/dev/null || echo 0; }
 
-# nanuk check          lista lo pendiente
+# nanuk check          ¿hay versión nueva de Nanuk? (y, de paso, cuántas del sistema)
 # nanuk check --json   para la rueda de waybar (texto vacío = la rueda no se ve)
 # nanuk check --ask    lo lista y pregunta si actualizar ya (clic en la rueda)
+#
+# La rueda de la barra SOLO se enciende con Nanuk (el repositorio): las
+# actualizaciones del sistema, del AUR o de flatpak no la encienden ni
+# preguntan. `nanuk update` las aplica igual (hace un `pacman -Syu` completo).
+# En `nanuk check` a mano sí se cuentan, solo como aviso, para no ir a ciegas.
 cmd_check() {
-  local mode="${1:-}" list n summary age boot
+  local mode="${1:-}" list n age boot sys
   local cache="${XDG_CACHE_HOME:-$HOME/.cache}/nanuk-updates.txt"
   mkdir -p "$(dirname "$cache")"
   boot="$(boot_id)"
+
   if [[ "$mode" == --json ]]; then
-    # La barra llama cada 10 min, pero a internet se va UNA vez por arranque:
-    # una hora después de encender (no compite con el arranque ni gasta datos
-    # si solo enciendes un rato), y otra si la sesión pasa de 24 h (suspender y
-    # reanudar durante días). Sin red no se gasta el intento: se reintenta en
-    # la siguiente llamada. El resto del tiempo, lo guardado.
+    # La barra llama cada 10 min, pero a internet se va UNA vez por arranque: una
+    # hora después de encender (no compite con el arranque ni gasta datos si solo
+    # enciendes un rato) y otra si la sesión pasa de 24 h. Sin red no se gasta el
+    # intento: se reintenta en la siguiente llamada. Lo único que se consulta es
+    # el canal de Nanuk (un `git ls-remote` de menos de 1 KB).
     age=$(( $(date +%s) - $(stat -c %Y "$cache" 2>/dev/null || echo 0) ))
     if (( $(uptime_seconds) >= 3600 )) \
        && { [[ "$(cat "$cache.boot" 2>/dev/null)" != "$boot" ]] || (( age >= 86400 )); } \
-       && timeout 5 getent hosts archlinux.org &>/dev/null; then
-      { pending_system; pending_nanuk; } > "$cache.tmp" && mv "$cache.tmp" "$cache"
+       && timeout 5 getent hosts github.com &>/dev/null; then
+      pending_nanuk > "$cache.tmp" && mv "$cache.tmp" "$cache"
       echo "$boot" > "$cache.boot"
     fi
     # Lo guardado en un arranque anterior no se enseña: pudo actualizarse por otro lado.
@@ -488,36 +495,40 @@ cmd_check() {
     else
       list=""
     fi
-  else
-    echo "Buscando actualizaciones (repos, AUR, flatpak, Nanuk)..."
-    # Consulta al momento, y de paso la barra se queda con este resultado.
-    list="$(pending_system; pending_nanuk)"
-    printf '%s\n' "$list" > "$cache"
-    echo "$boot" > "$cache.boot"
-  fi
-  n="$(grep -c . <<<"$list" || true)"
-  summary="$(cut -f1 <<<"$list" | grep . | sort | uniq -c \
-             | awk '{ printf "%s%s %s", (NR > 1 ? " · " : ""), $2, $1 }' || true)"
-
-  if [[ "$mode" == --json ]]; then
+    n="$(grep -c . <<<"$list" || true)"
     (( n > 0 )) || { echo '{"text":""}'; return 0; }
     # El tooltip de waybar es markup de Pango: "->" rompería sin escapar.
-    jq -cn --arg n "$n" --arg sum "$summary" --arg list "$list" '
+    jq -cn --arg n "$n" --arg list "$list" '
       def esc: gsub("&"; "&amp;") | gsub("<"; "&lt;") | gsub(">"; "&gt;");
       ($list | split("\n") | map(select(length > 0) | sub("\t"; ": ") | esc)) as $l
       | { text: "󰓦", class: "available",
-          tooltip: ("\($n) actualizaciones  (\($sum))\n\n" + ($l[0:15] | join("\n"))
+          tooltip: ("Nanuk: \($n) novedad(es)\n\n" + ($l[0:15] | join("\n"))
                     + (if ($l | length) > 15 then "\n… y \(($l | length) - 15) más" else "" end)
                     + "\n\nClic para actualizar") }'
     return 0
   fi
 
+  # A mano: consulta Nanuk al momento y deja el resultado para la barra.
+  echo "Buscando la versión de Nanuk..."
+  list="$(pending_nanuk)"
+  printf '%s\n' "$list" > "$cache"
+  echo "$boot" > "$cache.boot"
+  n="$(grep -c . <<<"$list" || true)"
+
+  # Cuántas trae el sistema, solo como aviso (no encienden la rueda ni preguntan).
+  sys=""
+  [[ "$mode" == --ask ]] || sys="$(pending_system | grep -c . || true)"
+
   if (( n == 0 )); then
-    echo "✔ Todo al día."
+    echo "✔ Nanuk al día."
   else
     echo
-    echo "${B}$n actualizaciones${X}  ($summary)"
+    echo "${B}Nanuk · $n cambio(s)${X}"
     column -t -s $'\t' <<<"$list" | sed 's/^/  /'
+  fi
+  if [[ -n "$sys" ]] && (( sys > 0 )); then
+    echo
+    echo "${Y}Nota:${X} el sistema tiene $sys actualizaciones pendientes. No encienden la rueda; se aplican con 'nanuk update' (hace un -Syu completo)."
   fi
   [[ "$mode" == --ask ]] || return 0
 
@@ -525,7 +536,7 @@ cmd_check() {
   export GUM_CONFIRM_SELECTED_BACKGROUND="#9fd8ff" GUM_CONFIRM_SELECTED_FOREGROUND="#000000" \
          GUM_CONFIRM_UNSELECTED_BACKGROUND="#1e1e1e"
   echo
-  if (( n > 0 )) && gum confirm "¿Actualizar el sistema ahora?" --affirmative "Actualizar ahora" --negative "Más tarde"; then
+  if (( n > 0 )) && gum confirm "¿Actualizar Nanuk y el sistema ahora?" --affirmative "Actualizar ahora" --negative "Más tarde"; then
     # En otro proceso: update se relanza a sí mismo tras el pull (exec).
     bash "$REPO/bin/nanuk" update || warn "la actualización terminó con errores (mira arriba)"
   fi
@@ -918,7 +929,8 @@ nanuk — la CLI del sistema. En Nanuk conviven repos oficiales, AUR y flatpak.
   nanuk sync                   instala todo lo de tu lista (máquina nueva)
   nanuk update                 actualiza Nanuk (git pull), sistema, AUR, flatpak,
                                instala los paquetes nuevos de Nanuk y re-despliega la config
-  nanuk check [--ask]          ¿hay actualizaciones? --ask pregunta si actualizar (rueda de la barra)
+  nanuk check [--ask]          ¿hay versión nueva de Nanuk? --ask pregunta si actualizar
+                               (la rueda de la barra; solo Nanuk la enciende)
   nanuk webapp add "Nombre" <url>   crea una app web (Brave, ventana propia) en tu capa
   nanuk webapp remove <nombre> | list
   nanuk menu                   menú con buscador: paquetes, tema, fondo, actualizar (Super+Shift+I)

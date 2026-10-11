@@ -25,12 +25,12 @@ headerbar, .titlebar      { background-color: #000000; box-shadow: inset 0 -1px 
 entry, textview, .view    { background-color: #000000; }
 popover > contents, menu  { background-color: #0a0a0a; border: 1px solid #1a1a1a; }
 
-/* Listas y rejillas (Nautilus, diálogos): la selección es un contorno de hielo
- * sin relleno (un fondo gris sobre negro no se ve), separadores casi
- * invisibles. Radio 0 en todo: densidad estricta. */
+/* Listas y rejillas (Nautilus, diálogos): la selección es SOLO un contorno de
+ * hielo, sin relleno ni caja de fondo (un fondo negro tapaba la miniatura y
+ * partía el icono en dos). Separadores casi invisibles; radio 0 en todo. */
 list, listview, gridview, columnview          { background-color: #000000; color: #ffffff; }
 row:selected, .view:selected, listview > row:selected, gridview > child:selected,
-columnview > listview > row:selected           { background-color: #000000; color: #ffffff; box-shadow: inset 0 0 0 1px #9fd8ff; }
+columnview > listview > row:selected           { background-color: transparent; background-image: none; color: #ffffff; box-shadow: inset 0 0 0 1px #9fd8ff; }
 /* GtkTreeView (la lista de archivos del diálogo abrir/guardar en GTK3) pinta
  * cada columna por separado: con el contorno completo saldrían rayas entre
  * columnas, así que solo lleva las líneas de arriba y abajo. */

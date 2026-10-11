@@ -11,7 +11,12 @@ hl.config({
     border_size = 1,
 
     resize_on_border = true,        -- arrastrar el borde redimensiona
-    extend_border_grab_area = 12,   -- ...con un margen cómodo
+    -- Margen del borde para redimensionar. Pequeño a propósito: un margen
+    -- grande (12) invade el interior de la ventana y se come el primer y el
+    -- último renglón de la terminal, así que al empezar a seleccionar texto
+    -- desde arriba Hyprland redimensiona en vez de dejar seleccionar. Con 4
+    -- el borde sigue siendo fácil de agarrar y el texto queda libre.
+    extend_border_grab_area = 4,
     allow_tearing = false,
     layout = "dwindle",
 

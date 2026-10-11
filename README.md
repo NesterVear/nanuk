@@ -44,14 +44,16 @@ con ayuda si nunca has instalado Arch: [docs/instalar.md](docs/instalar.md).
 ## Actualizar
 
 ```bash
-nanuk check    # ¿hay algo nuevo? (solo mira: repos, AUR, flatpak y Nanuk)
+nanuk check    # ¿hay versión nueva de Nanuk? (solo mira; no cambia nada)
 nanuk update   # versión estable de Nanuk + sistema + paquetes nuevos + defaults
 ```
 
 No hace falta acordarse: **una hora después de encender**, Nanuk consulta una
-sola vez si hay actualizaciones (y otra si no apagas en más de 24 h). Si las
-hay, aparece el icono de actualizar (󰓦) junto al clima en la barra; clic → te las enseña y
-pregunta si actualizar ahora.
+sola vez si hay una versión nueva de Nanuk (y otra si no apagas en más de 24 h).
+Si la hay, aparece el icono de actualizar (󰓦) junto al clima en la barra; clic →
+te la enseña y pregunta si actualizar ahora. El icono **solo** se enciende con
+Nanuk, no con las actualizaciones del sistema: `nanuk update` las aplica igual
+(hace un `pacman -Syu` completo).
 
 `nanuk update` nunca toca `~/.config/nanuk/user/`. Pone Nanuk en la versión
 **estable** (si editaste `~/.local/share/nanuk`, guarda tus cambios con
@@ -71,7 +73,7 @@ hace falta reiniciar o cerrar sesión.
 | Instalar algo (repo/AUR/flatpak)   | `nanuk install <paquete>` (lo detecta y lo anota) |
 | Instalar sin acordarme de comandos | `nanuk menu`, `SUPER+SHIFT+I` o el copo de la barra: buscar/quitar paquetes, tema, fondo, actualizar |
 | Quitar varios paquetes a la vez    | `nanuk menu` → *Quitar paquetes*: todos los instalados, `Espacio` marca |
-| Saber si hay actualizaciones       | el icono 󰓦 de la barra (sale solo) o `nanuk check` |
+| Saber si hay versión nueva de Nanuk | el icono 󰓦 de la barra (sale solo) o `nanuk check` |
 | Seguir lo último (`main`) en vez de `estable` | `echo main > ~/.config/nanuk/user/channel` (bórralo para volver) |
 | Ver todos los atajos de teclado    | `nanuk keys` o `SUPER+K`                          |
 | Cambiar el fondo de pantalla       | `nanuk bg` (lista), `nanuk bg 3`, `SUPER+SHIFT+B` rota; los tuyos en `user/backgrounds/` |

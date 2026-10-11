@@ -5,10 +5,33 @@ set -euo pipefail
 choice=$(printf '%s\n' "Bloquear" "Suspender" "Cerrar sesión" "Reiniciar" "Apagar" \
   | fuzzel --dmenu --prompt "energía ❯ " --width 28 --lines 5 --minimal-lines)
 
+# Antes de apagar, reiniciar o cerrar sesión, pide a las ventanas que se cierren
+# (equivale a pulsar su X) y espera a que las apps salgan solas. Si no, systemd
+# tumba el compositor y mata los programas con una señal (SIGTERM), y algunos lo
+# toman como un cierre sucio: Firefox decía "no se cerró correctamente" y ofrecía
+# restaurar la sesión al día siguiente. Cerrando la ventana, guarda y sale bien.
+# Hyprland no tiene "cerrar todo", así que se hace ventana a ventana con hyprctl.
+# Si algo se resiste, se espera como mucho ~8 s y se sigue igual.
+close_windows() {
+  command -v hyprctl >/dev/null 2>&1 && hyprctl version &>/dev/null || return 0
+  command -v jq >/dev/null 2>&1 || return 0
+  local a i
+  local -a addrs
+  mapfile -t addrs < <(hyprctl clients -j 2>/dev/null | jq -r '.[].address' 2>/dev/null)
+  (( ${#addrs[@]} )) || return 0
+  for a in "${addrs[@]}"; do
+    hyprctl dispatch closewindow "address:$a" >/dev/null 2>&1 || true
+  done
+  for ((i = 0; i < 16; i++)); do
+    [[ "$(hyprctl clients -j 2>/dev/null | jq 'length' 2>/dev/null)" == "0" ]] && break
+    sleep 0.5
+  done
+}
+
 case "$choice" in
   "Bloquear")       hyprlock ;;
   "Suspender")      systemctl suspend ;;
-  "Cerrar sesión")  uwsm stop ;;
-  "Reiniciar")      systemctl reboot ;;
-  "Apagar")         systemctl poweroff ;;
+  "Cerrar sesión")  close_windows; uwsm stop ;;
+  "Reiniciar")      close_windows; systemctl reboot ;;
+  "Apagar")         close_windows; systemctl poweroff ;;
 esac

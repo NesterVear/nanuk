@@ -1,13 +1,17 @@
-# Nanuk — prompt (starship). Una línea, gris y blanco, sin color.
+# Nanuk — prompt (starship). Una línea, gris y blanco.
+# Al principio, un indicador del ÚLTIMO comando: ● hielo si salió bien, ✖ en
+# rojo suave si falló. Al final, la flecha ❯ de siempre.
 # https://starship.rs/config/
 
 add_newline = true
 command_timeout = 3000
-format = "[$directory$git_branch$git_status]($style)$python$character"
+# $character va PRIMERO (el indicador) y al final la flecha ❯ fija. Ojo: el
+# módulo character ya añade el espacio de después, no se pone otro.
+format = "$character[$directory$git_branch$git_status]($style)$python[❯](bold white) "
 
 [character]
-success_symbol = "[❯](bold white)"
-error_symbol = "[❯](bold #707070)"
+success_symbol = "[●](bold #9fd8ff)"
+error_symbol = "[✖](bold #d19a9a)"
 
 [directory]
 truncation_length = 2
