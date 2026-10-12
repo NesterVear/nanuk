@@ -13,7 +13,7 @@ base16.setup({
   palette = {
     base00 = "#000000", -- fondo
     base01 = "#0a0a0a", -- fondo de líneas de estado / cursorline
-    base02 = "#1e1e1e", -- selección
+    base02 = "#1e1e1e", -- relleno (CursorLine…) ; la selección va en hielo (abajo)
     base03 = "#707070", -- comentarios, invisibles
     base04 = "#909090", -- texto atenuado
     base05 = "#d8d8d8", -- texto normal
@@ -32,9 +32,12 @@ base16.setup({
 
 vim.g.colors_name = "nanuk"
 
--- Único acento de color: hielo en el cursor y la búsqueda activa.
+-- Único acento de color: hielo donde hay foco (cursor, búsqueda activa y
+-- selección). En todas, el texto va en negro encima para que se lea.
 local ice = "#9fd8ff"
-for _, group in ipairs({ "Cursor", "lCursor", "TermCursor", "IncSearch", "CurSearch" }) do
+for _, group in ipairs({ "Cursor", "lCursor", "TermCursor", "IncSearch", "CurSearch", "Visual" }) do
   vim.api.nvim_set_hl(0, group, { fg = "#000000", bg = ice })
 end
-vim.api.nvim_set_hl(0, "Search", { fg = "#000000", bg = "#3a3a3a" })
+-- El resto de coincidencias (no la activa): caja gris discreta, pero con el
+-- texto del color normal. Antes el texto iba en negro y sobre ese gris no se leía.
+vim.api.nvim_set_hl(0, "Search", { bg = "#3a3a3a" })

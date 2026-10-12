@@ -4,7 +4,7 @@ gui:
   theme:
     activeBorderColor:   ['#9fd8ff', bold]
     inactiveBorderColor: ['#333333']
-    selectedLineBgColor: ['#141414']
+    selectedLineBgColor: ['#2a2a2a']
     optionsTextColor:    ['#707070']
   returnImmediately: false
   wrapMainPanel: true
